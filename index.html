@@ -197,6 +197,14 @@
     background: var(--texto); color: #fff; border: 0;
   }
   .instalar .cerrar { background: none; color: var(--suave); padding: 8px; font-weight: 400; }
+  .banco { display: grid; gap: 6px; margin: 8px 0; }
+  .banco .fila { display: flex; align-items: center; gap: 8px; background: var(--verde-claro); border-radius: 10px; padding: 6px 6px 6px 12px; }
+  .banco .fila > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .banco .fila small { display: block; color: var(--suave); font-size: .78rem; font-weight: 600; }
+  .banco .fila button {
+    flex: none; font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; min-width: 76px;
+    background: var(--tarjeta); color: var(--texto); border: 1px solid var(--borde); border-radius: 8px; padding: 8px 10px;
+  }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -310,7 +318,8 @@
       <div class="caja" id="cajaTransferencia" style="display:grid;gap:10px">
         <div id="datosBanco" hidden>
           <b style="font-size:.92rem">Transfiere <span id="montoTransferir"></span> a:</b>
-          <pre class="mensaje" id="textoBanco" style="margin-top:6px"></pre>
+          <div id="textoBanco" class="banco"></div>
+          <button type="button" class="secundario" id="copiarBanco" style="width:100%">Copiar todos los datos</button>
           <p class="nota">Si el total final cambia, ajustamos la diferencia por WhatsApp.</p>
         </div>
         <label id="cajaComprobante" hidden>Comprobante de la transferencia (opcional)
@@ -733,12 +742,47 @@ function pintarTransferencia() {
   const esTransferencia = $("pago").value === "Transferencia";
   const banco = String(CONFIG.transferencia || "").trim();
   $("datosBanco").hidden = !banco;
-  $("textoBanco").textContent = banco;
+  pintarBanco(banco);
   $("montoTransferir").textContent = pesos(totales().total);
   $("cajaComprobante").hidden = !nube;
   $("cajaTransferencia").hidden = !esTransferencia || (!banco && !nube);
 }
 $("pago").addEventListener("change", pintarTransferencia);
+
+// Copia un texto y lo confirma en el mismo botón.
+async function copiar(texto, boton) {
+  const antes = boton.dataset.texto || (boton.dataset.texto = boton.textContent);
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch (e) {   // navegadores sin permiso de portapapeles
+    const t = document.createElement("textarea");
+    t.value = texto; t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.append(t); t.select();
+    try { document.execCommand("copy"); } catch (e2) { /* ignorar */ }
+    t.remove();
+  }
+  boton.textContent = "Copiado ✓";
+  setTimeout(() => { boton.textContent = antes; }, 1800);
+}
+// Cada línea de los datos bancarios queda con su botón: "Banco: Estado" copia solo "Estado".
+function pintarBanco(texto) {
+  const lineas = texto.split("\n").map((l) => l.trim()).filter(Boolean);
+  $("textoBanco").replaceChildren(...lineas.map((linea) => {
+    const m = /^([^:]{1,30}):\s*(.+)$/.exec(linea);
+    const valor = m ? m[2] : linea;
+    const fila = crear("div", "fila");
+    const caja = crear("div");
+    if (m) caja.append(crear("small", "", m[1]));
+    caja.append(document.createTextNode(valor));
+    const b = crear("button", "", "Copiar");
+    b.type = "button";
+    b.setAttribute("aria-label", "Copiar " + (m ? m[1] : valor));
+    b.onclick = () => copiar(valor, b);
+    fila.append(caja, b);
+    return fila;
+  }));
+  $("copiarBanco").onclick = () => copiar(lineas.join("\n"), $("copiarBanco"));
+}
 
 // Las fotos se achican antes de subir: cargan rápido y gastan pocos datos del celular.
 async function prepararComprobante(archivo) {
