@@ -168,6 +168,10 @@
     font: inherit; font-weight: 700; cursor: pointer; background: var(--tarjeta); color: var(--verde);
     border: 1px solid var(--verde); border-radius: 12px; padding: 12px;
   }
+  .acepto { display: flex; align-items: flex-start; gap: 10px; font-weight: 400; }
+  .acepto input { width: 22px; height: 22px; flex: none; margin: 1px 0 0; accent-color: var(--verde); }
+  .o { text-align: center; color: var(--suave); font-size: .9rem; margin: 2px 0; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
   .ok { color: #17663a; font-size: .92rem; margin: 0; }
   .pedidoViejo { display: grid; gap: 4px; }
   .pedidoViejo .cuando { font-weight: 700; display: flex; justify-content: space-between; gap: 12px; }
@@ -233,17 +237,29 @@
 
   <div class="paso" id="paso2" hidden>
     <h2>Paso 2: tus datos</h2>
+    <div id="p2Cuenta" hidden>
+      <div class="acciones">
+        <button type="button" class="secundario" id="sinCuenta">Continuar sin cuenta →</button>
+        <button type="button" class="volver" data-ir="1">← Volver a los productos</button>
+      </div>
+    </div>
     <form id="form" novalidate>
-      <label>Tu nombre
-        <input id="nombre" autocomplete="given-name" required>
-      </label>
-      <div class="dos">
-        <label>Edificio
-          <select id="edificio" required></select>
+      <div class="caja" id="datosGuardados" hidden>
+        <div id="datosGuardadosTexto"></div>
+        <button type="button" class="enlace" id="cambiarDatos">Cambiar estos datos</button>
+      </div>
+      <div id="camposDatos" style="display:grid;gap:12px">
+        <label>Tu nombre
+          <input id="nombre" autocomplete="given-name" required>
         </label>
-        <label>Depto
-          <input id="depto" inputmode="text" required>
-        </label>
+        <div class="dos">
+          <label>Edificio
+            <select id="edificio" required></select>
+          </label>
+          <label>Depto
+            <input id="depto" inputmode="text" required>
+          </label>
+        </div>
       </div>
       <label>Forma de pago
         <select id="pago">
@@ -253,7 +269,7 @@
       </label>
       <p class="error" id="error" role="alert"></p>
       <div class="acciones" style="margin-top:0">
-        <button class="enviar" type="submit">Paso 3: revisar y enviar →</button>
+        <button class="enviar" type="submit" id="irEnviar">Paso 3: revisar y enviar →</button>
         <button type="button" class="volver" data-ir="1">← Volver a los productos</button>
       </div>
     </form>
@@ -317,20 +333,26 @@
   <section id="vistaCuenta" class="paso" hidden>
     <div id="cuentaFuera">
       <h2>Tu cuenta</h2>
-      <p class="nota" style="margin:0 0 4px">Con una cuenta guardas tus pedidos y puedes repetirlos con un toque.</p>
+      <p class="nota" style="margin:0 0 4px">Con una cuenta no vuelves a escribir tus datos y puedes repetir tus pedidos con un toque.</p>
       <form id="formCuenta" novalidate>
         <label>Correo
           <input id="cCorreo" type="email" autocomplete="email" inputmode="email" required>
         </label>
+        <button class="enviar" type="button" id="cPorCodigo">Entrar sin contraseña: recibir un código en mi correo</button>
+        <p class="o">o con tu contraseña</p>
         <label>Contraseña
           <input id="cClave" type="password" autocomplete="current-password" minlength="8">
         </label>
-        <p class="error" id="cError" role="alert"></p>
-        <button class="enviar" type="submit">Entrar</button>
-        <button class="secundario" type="button" id="cCrear">Crear cuenta</button>
-        <button class="enlace" type="button" id="cPorCodigo">Entrar sin contraseña: recibir un código en mi correo</button>
+        <button class="secundario" type="submit">Entrar</button>
         <button class="enlace" type="button" id="cOlvide">Olvidé mi contraseña</button>
-        <p class="nota">Al crear una cuenta aceptas la <a href="privacidad.html">política de privacidad</a>.</p>
+        <p class="error" id="cError" role="alert"></p>
+        <p class="o">¿Primera vez?</p>
+        <label class="acepto">
+          <input type="checkbox" id="cAcepto">
+          <span>Acepto la <a href="privacidad.html" target="_blank" rel="noopener">política de privacidad</a></span>
+        </label>
+        <button class="secundario" type="button" id="cCrear" disabled>Crear cuenta</button>
+        <p class="nota" style="margin:0">Para crear tu cuenta puedes elegir una contraseña o, si la dejas vacía, te enviamos un código al correo.</p>
       </form>
     </div>
 
@@ -580,6 +602,7 @@ function mostrarPaso(n, mover) {
   $("pasos").querySelectorAll("span").forEach((s) => {
     if (Number(s.dataset.paso) === n) s.setAttribute("aria-current", "step"); else s.removeAttribute("aria-current");
   });
+  if (n === 2) pintarPaso2();
   if (n === 3) { pintarConfirmacion(); pintarNotaCuenta(); }
   if (mover) (n === 1 ? document.body : $("paso" + n)).scrollIntoView();
 }
@@ -601,11 +624,15 @@ $("form").addEventListener("submit", (e) => {
   e.preventDefault();
   const error = errorPaso2();
   $("error").textContent = error;
-  if (error) return;
+  if (error) { editando = true; pintarPaso2(); return; }
   guardar();
+  guardarPerfil();
+  editando = false;
   irPaso(3);
 });
-document.querySelectorAll(".volver").forEach((b) => { b.onclick = () => irPaso(Number(b.dataset.ir)); });
+document.querySelectorAll(".volver[data-ir]").forEach((b) => {
+  b.onclick = () => { if (b.dataset.ir === "2") editando = true; irPaso(Number(b.dataset.ir)); };
+});
 
 // --- envío ---
 function armarMensaje() {
@@ -709,6 +736,9 @@ $("formServicio").addEventListener("submit", (e) => {
 let nube = null;        // cliente de Supabase
 let sesion = null;      // sesión del cliente, si entró
 let esperaCodigo = null; // { correo, tipo: "email" | "recovery" }
+let invitado = false;    // eligió continuar sin cuenta
+let editando = false;    // pidió cambiar sus datos guardados
+let usuarioVisto = "";   // para cargar los datos de la cuenta una sola vez por sesión
 
 const ERRORES_CUENTA = [
   [/invalid login credentials/i, "Correo o contraseña incorrectos."],
@@ -717,6 +747,7 @@ const ERRORES_CUENTA = [
   [/expired|invalid.*(token|otp)|otp.*invalid/i, "El código no es válido o ya venció. Pide uno nuevo."],
   [/rate limit|security purposes|too many/i, "Demasiados intentos. Espera un minuto y prueba de nuevo."],
   [/password should be|weak/i, "La contraseña debe tener al menos 8 caracteres."],
+  [/signups? not allowed for otp/i, "Ese correo aún no tiene cuenta. Marca la casilla de la política de privacidad y pulsa “Crear cuenta”."],
   [/signups? not allowed|not authorized/i, "Por ahora no se pueden crear cuentas con ese correo."],
   [/invalid.*email|email.*invalid/i, "Revisa el correo: no parece válido."],
   [/fetch|network/i, "No hay conexión. Intenta de nuevo."],
@@ -749,7 +780,53 @@ async function iniciarCuentas() {
   pintarCuenta();
 }
 
+// Los formularios de acceso son uno solo: se muestran en "Mi cuenta" o dentro del paso 2.
+function ubicarCuenta(enPaso2) {
+  (enPaso2 ? $("p2Cuenta") : $("vistaCuenta")).prepend($("cuentaFuera"), $("cuentaCodigo"));
+}
+
+// Nombre, edificio y depto guardados en la cuenta: se cargan al entrar.
+function aplicarPerfil() {
+  const id = sesion ? sesion.user.id : "";
+  if (id === usuarioVisto) return;
+  usuarioVisto = id;
+  if (!sesion) return;
+  const m = sesion.user.user_metadata || {};
+  if (m.nombre) $("nombre").value = m.nombre;
+  if (m.depto) $("depto").value = m.depto;
+  if (m.edificio && CONFIG.edificios.includes(m.edificio)) $("edificio").value = m.edificio;
+  GEMELOS.forEach(([a, b]) => { $(b).value = $(a).value; });
+  editando = false;
+  guardar();
+}
+function guardarPerfil() {
+  if (!nube || !sesion) return;
+  const m = sesion.user.user_metadata || {};
+  const d = { nombre: $("nombre").value.trim().slice(0, 80), edificio: $("edificio").value.slice(0, 80), depto: $("depto").value.trim().slice(0, 20) };
+  if (m.nombre === d.nombre && m.edificio === d.edificio && m.depto === d.depto) return;
+  nube.auth.updateUser({ data: d }).catch(() => {});   // si falla, el pedido sigue igual
+}
+
+// Paso 2: sin sesión ofrece entrar o registrarse; con datos guardados solo pide confirmarlos.
+function pintarPaso2() {
+  const pideCuenta = Boolean(nube) && !sesion && !invitado;
+  const confirma = Boolean(sesion) && !editando && !errorPaso2();
+  if (pideCuenta) ubicarCuenta(true);
+  $("p2Cuenta").hidden = !pideCuenta;
+  $("form").hidden = pideCuenta;
+  $("datosGuardados").hidden = !confirma;
+  $("camposDatos").hidden = confirma;
+  if (confirma) {
+    $("datosGuardadosTexto").replaceChildren(
+      dato("Entregar a", $("nombre").value.trim() + " — " + $("edificio").value + ", depto " + $("depto").value.trim()));
+  }
+  $("irEnviar").textContent = confirma ? "Están bien: revisar y enviar →" : "Paso 3: revisar y enviar →";
+}
+$("sinCuenta").onclick = () => { invitado = true; pintarPaso2(); };
+$("cambiarDatos").onclick = () => { editando = true; pintarPaso2(); $("nombre").focus(); };
+
 function pintarCuenta() {
+  aplicarPerfil();
   $("btnCuenta").textContent = sesion ? "Mi cuenta" : "Entrar";
   $("cuentaDentro").hidden = !sesion;
   $("cuentaCodigo").hidden = Boolean(sesion) || !esperaCodigo;
@@ -758,6 +835,7 @@ function pintarCuenta() {
     $("cQuien").textContent = "Entraste como " + sesion.user.email + ".";
     if (vista === "cuenta") setTimeout(pintarHistorial, 0);   // fuera del aviso de sesión, para no bloquearlo
   }
+  if (vista === "productos" && paso === 2) pintarPaso2();
   pintarNotaCuenta();
 }
 function pintarNotaCuenta() {
@@ -793,17 +871,27 @@ async function intentar(idError, accion) {
   }
 }
 
+async function entrarConCodigo(crear) {
+  const correo = correoEscrito();
+  if (!correo) return;
+  if (await intentar("cError", () => nube.auth.signInWithOtp({ email: correo, options: { shouldCreateUser: crear } })))
+    pedirCodigo(correo, "email", "Escribe el código que enviamos a");
+}
+$("cPorCodigo").onclick = () => entrarConCodigo(false);
 $("formCuenta").addEventListener("submit", async (e) => {
   e.preventDefault();
+  if (!$("cClave").value) return entrarConCodigo(false);
   const correo = correoEscrito();
   if (!correo) return;
-  if (!$("cClave").value) { $("cError").textContent = "Escribe tu contraseña."; return; }
   await intentar("cError", () => nube.auth.signInWithPassword({ email: correo, password: $("cClave").value }));
 });
+$("cAcepto").onchange = () => { $("cCrear").disabled = !$("cAcepto").checked; };
 $("cCrear").onclick = async () => {
+  if (!$("cAcepto").checked) return;
+  if (!$("cClave").value) return entrarConCodigo(true);   // cuenta sin contraseña: se confirma con el código
   const correo = correoEscrito();
   if (!correo) return;
-  if ($("cClave").value.length < 8) { $("cError").textContent = "Elige una contraseña de al menos 8 caracteres."; return; }
+  if ($("cClave").value.length < 8) { $("cError").textContent = "Elige una contraseña de al menos 8 caracteres, o déjala vacía para recibir un código."; return; }
   const d = await intentar("cError", () => nube.auth.signUp({ email: correo, password: $("cClave").value }));
   if (!d) return;
   if (d.user && d.user.identities && d.user.identities.length === 0) {
@@ -811,12 +899,6 @@ $("cCrear").onclick = async () => {
     return;
   }
   if (!d.session) pedirCodigo(correo, "email", "Para confirmar tu cuenta, escribe el código que enviamos a");
-};
-$("cPorCodigo").onclick = async () => {
-  const correo = correoEscrito();
-  if (!correo) return;
-  if (await intentar("cError", () => nube.auth.signInWithOtp({ email: correo })))
-    pedirCodigo(correo, "email", "Escribe el código que enviamos a");
 };
 $("cOlvide").onclick = async () => {
   const correo = correoEscrito();
@@ -848,12 +930,13 @@ $("formClave").addEventListener("submit", async (e) => {
   }
 });
 $("cSalir").onclick = () => nube.auth.signOut();
-$("btnCuenta").onclick = () => { mostrarVista("cuenta"); pintarCuenta(); $("vistaCuenta").scrollIntoView(); };
+$("btnCuenta").onclick = () => { ubicarCuenta(false); mostrarVista("cuenta"); pintarCuenta(); $("vistaCuenta").scrollIntoView(); };
 $("cVolver").onclick = () => mostrarVista("productos");
 
 // Guarda el pedido en el historial del cliente. Nunca impide enviar el pedido.
 async function guardarPedido() {
   if (!nube || !sesion) return;
+  guardarPerfil();
   const t = totales();
   const fila = {
     nombre: $("nombre").value.trim().slice(0, 80), edificio: $("edificio").value.slice(0, 80),
