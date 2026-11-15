@@ -31,10 +31,12 @@
     },
     {
       "id": "p03",
-      "nombre": "Leche entera",
+      "nombre": "Leche Natural Entera",
       "formato": "caja 1 L",
-      "precio": 1150,
-      "cat": "Lácteos y huevos"
+      "precio": 1300,
+      "cat": "Lácteos y huevos",
+      "marca": "Lider",
+      "imagen": "img/leche-natural-entera-mwhym3md.jpg"
     },
     {
       "id": "p04",
