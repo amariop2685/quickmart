@@ -368,7 +368,7 @@
         <label>Contraseña
           <input id="cClave" type="password" autocomplete="current-password" minlength="8">
         </label>
-        <button class="secundario" type="submit">Entrar</button>
+        <button class="secundario" type="submit" id="cEntrar">Entrar</button>
         <button class="enlace" type="button" id="cOlvide">Olvidé mi contraseña</button>
         <p class="error" id="cError" role="alert"></p>
         <p class="o">¿Primera vez?</p>
@@ -382,17 +382,17 @@
     </div>
 
     <div id="cuentaCodigo" hidden>
-      <h2>Revisa tu correo</h2>
+      <h2>Escribe aquí tu código</h2>
       <p class="nota" id="codigoAviso" style="margin:0"></p>
       <form id="formCodigo" novalidate>
-        <label>Código
-          <input id="cCodigo" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required>
+        <label>Código de 6 dígitos
+          <input id="cCodigo" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required placeholder="123456" style="font-size:1.4rem;letter-spacing:.2em;text-align:center">
         </label>
         <label id="cNuevaCaja" hidden>Nueva contraseña
           <input id="cNueva" type="password" autocomplete="new-password" minlength="8">
         </label>
         <p class="error" id="codigoError" role="alert"></p>
-        <button class="enviar" type="submit">Confirmar</button>
+        <button class="enviar" type="submit" id="cConfirmar">Confirmar</button>
         <button class="enlace" type="button" id="cCancelar">← Usar otro correo</button>
       </form>
     </div>
@@ -772,7 +772,7 @@ const ERRORES_CUENTA = [
   [/expired|invalid.*(token|otp)|otp.*invalid/i, "El código no es válido o ya venció. Pide uno nuevo."],
   [/rate limit|security purposes|too many/i, "Demasiados intentos. Espera un minuto y prueba de nuevo."],
   [/password should be|weak/i, "La contraseña debe tener al menos 8 caracteres."],
-  [/signups? not allowed for otp/i, "Ese correo aún no tiene cuenta. Marca la casilla de la política de privacidad y pulsa “Crear cuenta”."],
+  [/signups? not allowed for otp/i, "Ese correo aún no tiene cuenta. Para crearla, marca “Acepto la política de privacidad” (más abajo) y pulsa “Crear cuenta”."],
   [/signups? not allowed|not authorized/i, "Por ahora no se pueden crear cuentas con ese correo."],
   [/invalid.*email|email.*invalid/i, "Revisa el correo: no parece válido."],
   [/fetch|network/i, "No hay conexión. Intenta de nuevo."],
@@ -872,64 +872,86 @@ function pintarNotaCuenta() {
 
 function pedirCodigo(correo, tipo, aviso) {
   esperaCodigo = { correo, tipo };
-  $("codigoAviso").textContent = aviso + " " + correo + ". Si no llega, revisa la carpeta de spam.";
+  $("codigoAviso").textContent = aviso + " " + correo + ". Puede tardar un minuto; si no lo ves, revisa la carpeta de spam.";
   $("cNuevaCaja").hidden = tipo !== "recovery";
   $("cCodigo").value = ""; $("cNueva").value = ""; $("codigoError").textContent = "";
   pintarCuenta();
-  $("cCodigo").focus();
+  $("cuentaCodigo").scrollIntoView({ block: "start", behavior: "smooth" });
+  $("cCodigo").focus({ preventScroll: true });
 }
-function correoEscrito() {
+function correoEscrito(boton) {
   const correo = $("cCorreo").value.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) { $("cError").textContent = "Escribe tu correo."; return ""; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+    mostrarError("cError", "Escribe tu correo arriba.", boton);
+    $("cCorreo").focus({ preventScroll: true });
+    return "";
+  }
   return correo;
 }
-// Ejecuta una acción de cuenta mostrando el error (si lo hay) en el elemento indicado.
-async function intentar(idError, accion) {
-  $(idError).textContent = "";
+// Muestra un error justo debajo del botón que se pulsó y lo deja a la vista.
+function mostrarError(idError, texto, boton) {
+  const el = $(idError);
+  el.textContent = texto;
+  if (!texto) return;
+  if (boton) boton.after(el);
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+// Ejecuta una acción de cuenta: mientras tanto el botón dice "Enviando…"; si falla, muestra el error a su lado.
+async function intentar(idError, accion, boton) {
+  mostrarError(idError, "");
+  const texto = boton ? boton.textContent : "";
+  if (boton) { boton.disabled = true; boton.textContent = "Enviando…"; }
   try {
     const { data, error } = await accion();
     if (error) throw error;
     return data || {};
   } catch (e) {
-    $(idError).textContent = errorCuenta(e);
+    mostrarError(idError, errorCuenta(e), boton);
     return null;
+  } finally {
+    if (boton) { boton.disabled = false; boton.textContent = texto; }
   }
 }
 
-async function entrarConCodigo(crear) {
-  const correo = correoEscrito();
+async function entrarConCodigo(boton) {
+  const correo = correoEscrito(boton);
   if (!correo) return;
-  if (await intentar("cError", () => nube.auth.signInWithOtp({ email: correo, options: { shouldCreateUser: crear } })))
-    pedirCodigo(correo, "email", "Escribe el código que enviamos a");
+  // Solo crea una cuenta nueva si aceptó la política de privacidad.
+  const crear = $("cAcepto").checked;
+  if (await intentar("cError", () => nube.auth.signInWithOtp({ email: correo, options: { shouldCreateUser: crear } }), boton))
+    pedirCodigo(correo, "email", "Enviamos un código de 6 dígitos a");
 }
-$("cPorCodigo").onclick = () => entrarConCodigo(false);
+$("cPorCodigo").onclick = () => entrarConCodigo($("cPorCodigo"));
 $("formCuenta").addEventListener("submit", async (e) => {
   e.preventDefault();
-  if (!$("cClave").value) return entrarConCodigo(false);
-  const correo = correoEscrito();
+  if (!$("cClave").value) return entrarConCodigo($("cPorCodigo"));
+  const boton = $("cEntrar");
+  const correo = correoEscrito(boton);
   if (!correo) return;
-  await intentar("cError", () => nube.auth.signInWithPassword({ email: correo, password: $("cClave").value }));
+  await intentar("cError", () => nube.auth.signInWithPassword({ email: correo, password: $("cClave").value }), boton);
 });
 $("cAcepto").onchange = () => { $("cCrear").disabled = !$("cAcepto").checked; };
 $("cCrear").onclick = async () => {
+  const boton = $("cCrear");
   if (!$("cAcepto").checked) return;
-  if (!$("cClave").value) return entrarConCodigo(true);   // cuenta sin contraseña: se confirma con el código
-  const correo = correoEscrito();
+  if (!$("cClave").value) return entrarConCodigo(boton);   // cuenta sin contraseña: se confirma con el código
+  const correo = correoEscrito(boton);
   if (!correo) return;
-  if ($("cClave").value.length < 8) { $("cError").textContent = "Elige una contraseña de al menos 8 caracteres, o déjala vacía para recibir un código."; return; }
-  const d = await intentar("cError", () => nube.auth.signUp({ email: correo, password: $("cClave").value }));
+  if ($("cClave").value.length < 8) { mostrarError("cError", "Elige una contraseña de al menos 8 caracteres, o déjala vacía para recibir un código.", boton); return; }
+  const d = await intentar("cError", () => nube.auth.signUp({ email: correo, password: $("cClave").value }), boton);
   if (!d) return;
   if (d.user && d.user.identities && d.user.identities.length === 0) {
-    $("cError").textContent = "Ese correo ya tiene cuenta. Entra o recupera tu contraseña.";
+    mostrarError("cError", "Ese correo ya tiene cuenta. Entra o recupera tu contraseña.", boton);
     return;
   }
-  if (!d.session) pedirCodigo(correo, "email", "Para confirmar tu cuenta, escribe el código que enviamos a");
+  if (!d.session) pedirCodigo(correo, "email", "Para confirmar tu cuenta, enviamos un código de 6 dígitos a");
 };
 $("cOlvide").onclick = async () => {
-  const correo = correoEscrito();
+  const boton = $("cOlvide");
+  const correo = correoEscrito(boton);
   if (!correo) return;
-  if (await intentar("cError", () => nube.auth.resetPasswordForEmail(correo)))
-    pedirCodigo(correo, "recovery", "Si ese correo tiene cuenta, enviamos un código a");
+  if (await intentar("cError", () => nube.auth.resetPasswordForEmail(correo), boton))
+    pedirCodigo(correo, "recovery", "Si ese correo tiene cuenta, enviamos un código de 6 dígitos a");
 };
 $("formCodigo").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -938,7 +960,7 @@ $("formCodigo").addEventListener("submit", async (e) => {
   if (!codigo) { $("codigoError").textContent = "Escribe el código."; return; }
   if (cambiaClave && $("cNueva").value.length < 8) { $("codigoError").textContent = "Elige una contraseña de al menos 8 caracteres."; return; }
   const nueva = $("cNueva").value;
-  const d = await intentar("codigoError", () => nube.auth.verifyOtp({ email: esperaCodigo.correo, token: codigo, type: esperaCodigo.tipo }));
+  const d = await intentar("codigoError", () => nube.auth.verifyOtp({ email: esperaCodigo.correo, token: codigo, type: esperaCodigo.tipo }), $("cConfirmar"));
   if (!d) return;
   esperaCodigo = null;
   if (cambiaClave) await intentar("claveError", () => nube.auth.updateUser({ password: nueva }));
