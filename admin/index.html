@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>QuickMart — Administración</title>
+<style>
+  :root {
+    --fondo: #f4f5f9; --tarjeta: #fff; --texto: #0b1a4a; --suave: #5b6482;
+    --borde: #dfe2ec; --rojo: #d90b16; --rojo-osc: #b00812; --claro: #eef0f8; --ok: #1a7f4b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto);
+         font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .ancho { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+  header { background: #fff; border-bottom: 4px solid var(--rojo); padding: 14px 0; }
+  header .ancho { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  header img { height: 44px; width: auto; }
+  header h1 { font-size: 1.15rem; margin: 0; flex: 1; }
+  header a { color: var(--texto); font-weight: 600; }
+  #estado { font-size: .9rem; font-weight: 600; color: var(--suave); min-width: 9em; text-align: right; }
+  #estado.ok { color: var(--ok); } #estado.mal { color: var(--rojo); }
+
+  .pestanas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0; }
+  .pestanas button { font: inherit; font-weight: 700; cursor: pointer; padding: 11px 6px;
+    background: var(--tarjeta); color: var(--texto); border: 1px solid var(--borde); border-radius: 12px; }
+  .pestanas button[aria-selected="true"] { background: var(--texto); border-color: var(--texto); color: #fff; }
+
+  .barra { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .barra input { flex: 1; min-width: 160px; }
+  input, select, textarea { width: 100%; font: inherit; color: inherit; background: var(--tarjeta);
+    border: 1px solid var(--borde); border-radius: 10px; padding: 10px 12px; }
+  input:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--rojo); outline-offset: 1px; }
+  button.principal, button.secundario, button.peligro { font: inherit; font-weight: 700; cursor: pointer;
+    border-radius: 10px; padding: 10px 16px; white-space: nowrap; }
+  button.principal { background: var(--rojo); color: #fff; border: 1px solid var(--rojo); }
+  button.principal:hover { background: var(--rojo-osc); }
+  button.secundario { background: var(--tarjeta); color: var(--texto); border: 1px solid var(--borde); }
+  button.peligro { background: var(--tarjeta); color: var(--rojo); border: 1px solid var(--borde); }
+
+  .lista { display: grid; gap: 8px; }
+  .item { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px;
+    padding: 10px 12px; display: flex; align-items: center; gap: 12px; }
+  .item .foto { flex: none; width: 52px; height: 52px; border-radius: 10px; object-fit: cover;
+    background: var(--claro); color: var(--suave); display: grid; place-items: center; font-weight: 700; }
+  .item .datos { flex: 1; min-width: 0; }
+  .item .marca { color: var(--suave); font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+  .item .nombre { font-weight: 600; }
+  .item .detalle { color: var(--suave); font-size: .88rem; }
+  .item .acciones { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .item .acciones button { padding: 7px 12px; font-size: .9rem; }
+  .vacio { color: var(--suave); padding: 12px 0; }
+  .cuenta { color: var(--suave); font-size: .9rem; }
+
+  form.ficha { display: grid; gap: 12px; }
+  label { display: grid; gap: 5px; font-size: .92rem; font-weight: 600; }
+  label small { font-weight: 400; color: var(--suave); }
+  .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .caja { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 16px; }
+  .error { color: var(--rojo); font-size: .92rem; min-height: 1.2em; margin: 0; }
+  .fotoFila { display: flex; gap: 12px; align-items: center; }
+  .fotoFila img, .fotoFila .sin { flex: none; width: 84px; height: 84px; border-radius: 12px; object-fit: cover;
+    background: var(--claro); display: grid; place-items: center; color: var(--suave); font-size: .8rem; }
+  .botones { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
+  dialog { border: 0; border-radius: 16px; padding: 20px; width: min(520px, calc(100vw - 24px)); color: var(--texto); }
+  dialog::backdrop { background: rgba(11, 26, 74, .45); }
+  dialog h2 { margin: 0 0 14px; font-size: 1.15rem; }
+  #acceso { max-width: 460px; margin: 32px auto; }
+  #acceso h2 { margin: 0 0 6px; font-size: 1.2rem; }
+  #acceso p { margin: 0 0 12px; color: var(--suave); font-size: .95rem; }
+  details { font-size: .92rem; color: var(--suave); }
+  details summary { cursor: pointer; font-weight: 600; color: var(--texto); }
+  details ol { padding-left: 1.2em; margin: 8px 0 0; }
+  details li { margin-bottom: 4px; }
+  #salir { font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; background: none;
+    border: 1px solid var(--borde); border-radius: 8px; padding: 6px 10px; color: var(--texto); }
+  [hidden] { display: none !important; }
+  @media (max-width: 520px) { .dos { grid-template-columns: 1fr; } .item { flex-wrap: wrap; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="ancho">
+    <img src="/logo.webp" alt="QuickMart">
+    <h1>Administración</h1>
+    <a href="/" target="_blank" rel="noopener">Ver la página de pedidos</a>
+    <span id="estado" role="status"></span>
+    <button id="salir" type="button" hidden>Cerrar sesión</button>
+  </div>
+</header>
+
+<section class="ancho" id="acceso" hidden>
+  <form class="ficha caja" id="formAcceso" novalidate>
+    <div>
+      <h2>Entrar a la administración</h2>
+      <p>Pega tu clave de acceso. Se guarda solo en este dispositivo.</p>
+    </div>
+    <label>Clave de acceso
+      <input id="clave" type="password" autocomplete="off" spellcheck="false">
+    </label>
+    <p class="error" id="accesoError" role="alert"></p>
+    <div class="botones"><button class="principal" type="submit">Entrar</button></div>
+    <details>
+      <summary>¿Cómo consigo la clave?</summary>
+      <ol>
+        <li>Entra a github.com con tu cuenta y abre Settings → Developer settings → Personal access tokens → Fine-grained tokens.</li>
+        <li>Crea un token nuevo. En “Repository access” elige “Only select repositories” y marca solo <b>quickmart</b>.</li>
+        <li>En “Permissions → Repository permissions”, deja <b>Contents</b> en “Read and write”.</li>
+        <li>Genera el token, cópialo y pégalo aquí. No lo compartas con nadie.</li>
+      </ol>
+    </details>
+  </form>
+</section>
+
+<main class="ancho" id="panel" hidden>
+  <div class="pestanas" role="tablist">
+    <button type="button" role="tab" data-vista="productos" aria-selected="true">Productos</button>
+    <button type="button" role="tab" data-vista="servicios" aria-selected="false">Servicios</button>
+    <button type="button" role="tab" data-vista="negocio" aria-selected="false">Datos del negocio</button>
+  </div>
+
+  <section id="v-productos">
+    <div class="barra">
+      <input id="buscar" type="search" placeholder="Buscar por nombre, marca o categoría…" aria-label="Buscar producto">
+      <button class="principal" id="nuevoProducto" type="button">+ Agregar producto</button>
+    </div>
+    <p class="cuenta" id="cuenta"></p>
+    <div class="lista" id="listaProductos"></div>
+  </section>
+
+  <section id="v-servicios" hidden>
+    <div class="barra">
+      <span style="flex:1" class="cuenta">Si no dejas ningún servicio, la pestaña Servicios se oculta en la página.</span>
+      <button class="principal" id="nuevoServicio" type="button">+ Agregar servicio</button>
+    </div>
+    <div class="lista" id="listaServicios"></div>
+  </section>
+
+  <section id="v-negocio" hidden>
+    <form class="ficha caja" id="formNegocio" novalidate>
+      <div class="dos">
+        <label>Nombre del negocio <input id="nNombre"></label>
+        <label>Frase bajo el logo <input id="nBajada"></label>
+      </div>
+      <label>WhatsApp que recibe los pedidos
+        <small>Con código de país, sin “+” ni espacios. Mientras esté vacío, los pedidos no se envían.</small>
+        <input id="nWhatsapp" inputmode="numeric" autocomplete="off">
+      </label>
+      <div class="dos">
+        <label>Cobro por despacho (pesos) <input id="nTarifa" type="number" min="0" step="100"></label>
+        <label>Pedido mínimo (pesos) <small>0 = sin mínimo</small><input id="nMinimo" type="number" min="0" step="100"></label>
+      </div>
+      <label>Horario de entregas <input id="nHorario"></label>
+      <label>Edificios que atiendes <small>Uno por línea.</small>
+        <textarea id="nEdificios" rows="5"></textarea>
+      </label>
+      <p class="error" id="nError" role="alert"></p>
+      <div class="botones"><button class="principal" type="submit">Guardar datos</button></div>
+    </form>
+  </section>
+</main>
+
+<dialog id="dlgProducto">
+  <h2 id="tituloProducto">Producto</h2>
+  <form class="ficha" id="formProducto" novalidate>
+    <div class="dos">
+      <label>Nombre <input id="pNombre" required></label>
+      <label>Marca <small>Opcional</small><input id="pMarca"></label>
+    </div>
+    <div class="dos">
+      <label>Formato <small>Ej.: caja 1 L</small><input id="pFormato"></label>
+      <label>Precio (pesos) <input id="pPrecio" type="number" min="0" step="10" required></label>
+    </div>
+    <label>Categoría <input id="pCat" list="categorias"><datalist id="categorias"></datalist></label>
+    <label>Imagen <small>Opcional. Se achica sola para que cargue rápido.</small>
+      <div class="fotoFila">
+        <div class="sin" id="pSinFoto">Sin foto</div>
+        <img id="pVista" alt="" hidden>
+        <div style="flex:1; display:grid; gap:8px">
+          <input id="pFoto" type="file" accept="image/jpeg,image/png,image/webp">
+          <button class="secundario" id="pQuitarFoto" type="button" hidden>Quitar foto</button>
+        </div>
+      </div>
+    </label>
+    <p class="error" id="pError" role="alert"></p>
+    <div class="botones">
+      <button class="secundario" type="button" data-cerrar>Cancelar</button>
+      <button class="principal" type="submit">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgServicio">
+  <h2 id="tituloServicio">Servicio</h2>
+  <form class="ficha" id="formServicio" novalidate>
+    <label>Nombre <input id="sNombre" required></label>
+    <label>Descripción <textarea id="sDetalle" rows="2"></textarea></label>
+    <label>Precio que se muestra <small>Texto libre. Ej.: Desde $15.000</small><input id="sPrecio"></label>
+    <p class="error" id="sError" role="alert"></p>
+    <div class="botones">
+      <button class="secundario" type="button" data-cerrar>Cancelar</button>
+      <button class="principal" type="submit">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const pesos = (n) => "$" + (Number(n) || 0).toLocaleString("es-CL");
+let datos = { config: {}, productos: [], servicios: [] };
+let editando = null;        // producto o índice de servicio que se está editando (null = nuevo)
+let fotoNueva = null;       // archivo elegido en el formulario, aún sin subir
+let fotoActual = "";        // ruta de la imagen que ya tiene el producto
+
+function crear(etiqueta, clase, texto) {
+  const el = document.createElement(etiqueta);
+  if (clase) el.className = clase;
+  if (texto !== undefined) el.textContent = texto;
+  return el;
+}
+function boton(clase, texto, alHacerClic) {
+  const b = crear("button", clase, texto);
+  b.type = "button";
+  b.onclick = alHacerClic;
+  return b;
+}
+function estado(texto, clase) {
+  $("estado").textContent = texto;
+  $("estado").className = clase || "";
+}
+
+// --- dónde se guardan los cambios ---
+// En tu computador (localhost) los guarda servidor.py.
+// En quickmart.cl los guarda directamente en el repositorio de GitHub, usando tu clave de acceso.
+const LOCAL = ["localhost", "127.0.0.1"].includes(location.hostname);
+const REPO = "amariop2685/quickmart";
+const API = "https://api.github.com/repos/" + REPO;
+const CLAVE_GUARDADA = "quickmart-admin-clave";
+let token = "";
+let shaCatalogo = "";          // versión del catálogo que tenemos, para no pisar cambios ajenos
+const vistasLocales = {};      // fotos recién subidas, para verlas antes de que se publiquen
+
+function aBase64(bytes) {
+  let texto = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    texto += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(texto);
+}
+function deBase64(b64) {
+  const bin = atob(b64.replace(/\s/g, ""));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+async function github(ruta, opciones = {}) {
+  const r = await fetch(API + ruta, {
+    ...opciones,
+    cache: "no-store",
+    headers: { Accept: "application/vnd.github+json", Authorization: "Bearer " + token },
+  });
+  let cuerpo = null;
+  try { cuerpo = await r.json(); } catch (e) { /* sin cuerpo */ }
+  if (!r.ok) {
+    const mensajes = {
+      401: "La clave no es válida o ya venció.",
+      403: "La clave no tiene permiso para editar este sitio.",
+      404: "La clave no tiene permiso para editar este sitio.",
+      409: "El catálogo cambió desde otro dispositivo. Recarga la página y repite el cambio.",
+      422: "El catálogo cambió desde otro dispositivo. Recarga la página y repite el cambio.",
+    };
+    const error = new Error(mensajes[r.status] || "Error " + r.status);
+    error.status = r.status;
+    throw error;
+  }
+  return cuerpo;
+}
+
+const almacenLocal = {
+  async cargar() {
+    const r = await fetch("/catalogo.json", { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  },
+  async guardar(d) {
+    const r = await fetch("/api/catalogo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Admin": "1" },
+      body: JSON.stringify(d),
+    });
+    if (!r.ok) throw new Error((await r.json()).error || "Error " + r.status);
+  },
+  async subir(blob, nombre) {
+    const r = await fetch("/api/imagen?nombre=" + encodeURIComponent(nombre), {
+      method: "POST", headers: { "Content-Type": "image/jpeg", "X-Admin": "1" }, body: blob,
+    });
+    const res = await r.json();
+    if (!r.ok) throw new Error(res.error || "Error " + r.status);
+    return res.ruta;
+  },
+};
+
+const almacenGithub = {
+  async cargar() {
+    const repo = await github("");
+    if (repo.permissions && repo.permissions.push === false) {
+      const error = new Error("La clave no tiene permiso para editar este sitio.");
+      error.status = 403;
+      throw error;
+    }
+    const archivo = await github("/contents/catalogo.json?ref=main");
+    shaCatalogo = archivo.sha;
+    return JSON.parse(deBase64(archivo.content));
+  },
+  async guardar(d) {
+    const texto = JSON.stringify(d, null, 2) + "\n";
+    const r = await github("/contents/catalogo.json", {
+      method: "PUT",
+      body: JSON.stringify({
+        message: "Actualiza el catálogo desde la administración",
+        content: aBase64(new TextEncoder().encode(texto)),
+        sha: shaCatalogo,
+        branch: "main",
+      }),
+    });
+    shaCatalogo = r.content.sha;
+  },
+  async subir(blob, nombre) {
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    await github("/contents/img/" + nombre, {
+      method: "PUT",
+      body: JSON.stringify({ message: "Agrega la foto " + nombre, content: aBase64(bytes), branch: "main" }),
+    });
+    return "img/" + nombre;
+  },
+};
+const almacen = LOCAL ? almacenLocal : almacenGithub;
+
+async function guardar() {
+  estado("Guardando…");
+  try {
+    await almacen.guardar(datos);
+    estado(LOCAL ? "Guardado ✓" : "Guardado ✓ · visible en 1 a 2 min", "ok");
+    return true;
+  } catch (e) {
+    estado("No se pudo guardar", "mal");
+    alert("No se pudo guardar: " + e.message);
+    return false;
+  }
+}
+
+// --- pestañas ---
+document.querySelectorAll(".pestanas button").forEach((b) => {
+  b.onclick = () => {
+    document.querySelectorAll(".pestanas button").forEach((x) =>
+      x.setAttribute("aria-selected", String(x === b)));
+    ["productos", "servicios", "negocio"].forEach((v) => { $("v-" + v).hidden = v !== b.dataset.vista; });
+  };
+});
+document.querySelectorAll("[data-cerrar]").forEach((b) => { b.onclick = () => b.closest("dialog").close(); });
+
+// --- productos ---
+function miniatura(p) {
+  const sin = () => crear("div", "foto", (p.nombre || "?").charAt(0).toUpperCase());
+  if (!p.imagen) return sin();
+  const img = crear("img", "foto");
+  img.src = vistasLocales[p.imagen] || "/" + p.imagen;
+  img.alt = "";
+  img.onerror = () => img.replaceWith(sin());
+  return img;
+}
+
+function pintarProductos() {
+  const q = $("buscar").value.trim().toLowerCase();
+  const visibles = datos.productos.filter((p) =>
+    !q || [p.nombre, p.marca, p.cat, p.formato].join(" ").toLowerCase().includes(q));
+  $("cuenta").textContent = datos.productos.length + " productos en el catálogo" +
+    (q ? " · " + visibles.length + " coinciden" : "");
+  if (visibles.length === 0) {
+    $("listaProductos").replaceChildren(crear("p", "vacio", "No hay productos que mostrar."));
+    return;
+  }
+  $("listaProductos").replaceChildren(...visibles.map((p) => {
+    const fila = crear("div", "item");
+    const d = crear("div", "datos");
+    if (p.marca) d.append(crear("div", "marca", p.marca));
+    d.append(crear("div", "nombre", p.nombre),
+             crear("div", "detalle", [p.formato, p.cat, pesos(p.precio)].filter(Boolean).join(" · ")));
+    const acc = crear("div", "acciones");
+    acc.append(boton("secundario", "Editar", () => abrirProducto(p)),
+               boton("peligro", "Eliminar", () => eliminarProducto(p)));
+    fila.append(miniatura(p), d, acc);
+    return fila;
+  }));
+}
+
+function mostrarFoto(url) {
+  $("pVista").hidden = !url;
+  $("pSinFoto").hidden = Boolean(url);
+  $("pQuitarFoto").hidden = !url;
+  if (url) $("pVista").src = url;
+}
+
+function abrirProducto(p) {
+  editando = p || null;
+  fotoNueva = null;
+  fotoActual = p && p.imagen ? p.imagen : "";
+  $("tituloProducto").textContent = p ? "Editar producto" : "Agregar producto";
+  $("pNombre").value = p ? p.nombre || "" : "";
+  $("pMarca").value = p ? p.marca || "" : "";
+  $("pFormato").value = p ? p.formato || "" : "";
+  $("pPrecio").value = p ? p.precio : "";
+  $("pCat").value = p ? p.cat || "" : "";
+  $("pFoto").value = "";
+  $("pError").textContent = "";
+  mostrarFoto(fotoActual ? vistasLocales[fotoActual] || "/" + fotoActual : "");
+  $("categorias").replaceChildren(...[...new Set(datos.productos.map((x) => x.cat).filter(Boolean))]
+    .map((c) => new Option(c)));
+  $("dlgProducto").showModal();
+}
+
+$("pFoto").onchange = () => {
+  fotoNueva = $("pFoto").files[0] || null;
+  if (fotoNueva) mostrarFoto(URL.createObjectURL(fotoNueva));
+};
+$("pQuitarFoto").onclick = () => { fotoNueva = null; fotoActual = ""; $("pFoto").value = ""; mostrarFoto(""); };
+
+// Achica la foto a 600 px como máximo y la deja en JPG liviano.
+async function achicar(archivo) {
+  const mapa = await createImageBitmap(archivo);
+  const escala = Math.min(1, 600 / Math.max(mapa.width, mapa.height));
+  const lienzo = document.createElement("canvas");
+  lienzo.width = Math.round(mapa.width * escala);
+  lienzo.height = Math.round(mapa.height * escala);
+  const ctx = lienzo.getContext("2d");
+  ctx.fillStyle = "#fff";                        // fondo blanco para imágenes con transparencia
+  ctx.fillRect(0, 0, lienzo.width, lienzo.height);
+  ctx.drawImage(mapa, 0, 0, lienzo.width, lienzo.height);
+  return new Promise((ok, mal) =>
+    lienzo.toBlob((b) => (b ? ok(b) : mal(new Error("No se pudo procesar la imagen."))), "image/jpeg", 0.85));
+}
+
+async function subirFoto(archivo, nombreProducto) {
+  const blob = await achicar(archivo);
+  const base = (nombreProducto || "foto").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50) || "foto";
+  const ruta = await almacen.subir(blob, base + "-" + Date.now().toString(36) + ".jpg");
+  vistasLocales[ruta] = URL.createObjectURL(blob);
+  return ruta;
+}
+
+$("formProducto").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const nombre = $("pNombre").value.trim();
+  const precio = Number($("pPrecio").value);
+  let error = "";
+  if (!nombre) error = "Escribe el nombre del producto.";
+  else if ($("pPrecio").value === "" || !Number.isFinite(precio) || precio < 0) error = "Escribe un precio válido.";
+  $("pError").textContent = error;
+  if (error) return;
+
+  let imagen = fotoActual;
+  if (fotoNueva) {
+    try { imagen = await subirFoto(fotoNueva, nombre); }
+    catch (err) { $("pError").textContent = "No se pudo subir la imagen: " + err.message; return; }
+  }
+  const p = editando || { id: "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) };
+  p.nombre = nombre;
+  p.formato = $("pFormato").value.trim();
+  p.precio = Math.round(precio);
+  p.cat = $("pCat").value.trim() || "Otros";
+  const marca = $("pMarca").value.trim();
+  if (marca) p.marca = marca; else delete p.marca;
+  if (imagen) p.imagen = imagen; else delete p.imagen;
+  if (!editando) datos.productos.push(p);
+  if (await guardar()) { $("dlgProducto").close(); pintarProductos(); }
+});
+
+async function eliminarProducto(p) {
+  if (!confirm("¿Eliminar “" + p.nombre + "” del catálogo?")) return;
+  datos.productos = datos.productos.filter((x) => x !== p);
+  await guardar();
+  pintarProductos();
+}
+
+// --- servicios ---
+function pintarServicios() {
+  if (datos.servicios.length === 0) {
+    $("listaServicios").replaceChildren(crear("p", "vacio", "Aún no hay servicios."));
+    return;
+  }
+  $("listaServicios").replaceChildren(...datos.servicios.map((s, i) => {
+    const fila = crear("div", "item");
+    const d = crear("div", "datos");
+    d.append(crear("div", "nombre", s.nombre),
+             crear("div", "detalle", [s.detalle, s.precio].filter(Boolean).join(" · ")));
+    const acc = crear("div", "acciones");
+    acc.append(boton("secundario", "Editar", () => abrirServicio(i)),
+               boton("peligro", "Eliminar", async () => {
+                 if (!confirm("¿Eliminar el servicio “" + s.nombre + "”?")) return;
+                 datos.servicios.splice(i, 1);
+                 await guardar();
+                 pintarServicios();
+               }));
+    fila.append(d, acc);
+    return fila;
+  }));
+}
+
+function abrirServicio(i) {
+  editando = Number.isInteger(i) ? i : null;
+  const s = editando !== null ? datos.servicios[editando] : {};
+  $("tituloServicio").textContent = editando !== null ? "Editar servicio" : "Agregar servicio";
+  $("sNombre").value = s.nombre || "";
+  $("sDetalle").value = s.detalle || "";
+  $("sPrecio").value = s.precio || "";
+  $("sError").textContent = "";
+  $("dlgServicio").showModal();
+}
+
+$("formServicio").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const nombre = $("sNombre").value.trim();
+  if (!nombre) { $("sError").textContent = "Escribe el nombre del servicio."; return; }
+  const s = { nombre, detalle: $("sDetalle").value.trim(), precio: $("sPrecio").value.trim() };
+  if (editando !== null) datos.servicios[editando] = s; else datos.servicios.push(s);
+  if (await guardar()) { $("dlgServicio").close(); pintarServicios(); }
+});
+
+// --- datos del negocio ---
+function llenarNegocio() {
+  const c = datos.config;
+  $("nNombre").value = c.nombre || "";
+  $("nBajada").value = c.bajada || "";
+  $("nWhatsapp").value = c.whatsapp || "";
+  $("nTarifa").value = c.tarifa ?? 0;
+  $("nMinimo").value = c.minimo ?? 0;
+  $("nHorario").value = c.horario || "";
+  $("nEdificios").value = (c.edificios || []).join("\n");
+}
+
+$("formNegocio").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const edificios = $("nEdificios").value.split("\n").map((x) => x.trim()).filter(Boolean);
+  const whatsapp = $("nWhatsapp").value.replace(/\D/g, "");
+  let error = "";
+  if (!$("nNombre").value.trim()) error = "Escribe el nombre del negocio.";
+  else if (edificios.length === 0) error = "Agrega al menos un edificio.";
+  else if (whatsapp && whatsapp.length < 10) error = "El número de WhatsApp parece incompleto.";
+  $("nError").textContent = error;
+  if (error) return;
+  datos.config = {
+    nombre: $("nNombre").value.trim(),
+    bajada: $("nBajada").value.trim(),
+    whatsapp,
+    tarifa: Math.max(0, Math.round(Number($("nTarifa").value) || 0)),
+    minimo: Math.max(0, Math.round(Number($("nMinimo").value) || 0)),
+    horario: $("nHorario").value.trim(),
+    edificios,
+  };
+  if (await guardar()) llenarNegocio();
+});
+
+// --- inicio ---
+$("buscar").addEventListener("input", pintarProductos);
+$("nuevoProducto").onclick = () => abrirProducto(null);
+$("nuevoServicio").onclick = () => abrirServicio(null);
+
+async function arrancar() {
+  const c = await almacen.cargar();
+  datos = {
+    config: c.config || {},
+    productos: Array.isArray(c.productos) ? c.productos : [],
+    servicios: Array.isArray(c.servicios) ? c.servicios : [],
+  };
+  pintarProductos();
+  pintarServicios();
+  llenarNegocio();
+  $("acceso").hidden = true;
+  $("panel").hidden = false;
+  $("salir").hidden = LOCAL;
+}
+
+function pedirClave(mensaje) {
+  token = "";
+  $("panel").hidden = true;
+  $("acceso").hidden = false;
+  $("accesoError").textContent = mensaje || "";
+  $("clave").value = "";
+  $("clave").focus();
+}
+
+$("formAcceso").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  token = $("clave").value.trim();
+  if (!token) { $("accesoError").textContent = "Pega tu clave de acceso."; return; }
+  $("accesoError").textContent = "Comprobando…";
+  try {
+    await arrancar();
+    try { localStorage.setItem(CLAVE_GUARDADA, token); } catch (err) { /* sin memoria: pedirá la clave cada vez */ }
+  } catch (err) {
+    pedirClave(err.status ? err.message : "No se pudo conectar. Revisa tu internet e intenta de nuevo.");
+  }
+});
+
+$("salir").onclick = () => {
+  try { localStorage.removeItem(CLAVE_GUARDADA); } catch (err) { /* ignorar */ }
+  location.reload();
+};
+
+(async () => {
+  if (!LOCAL) {
+    try { token = localStorage.getItem(CLAVE_GUARDADA) || ""; } catch (err) { token = ""; }
+    if (!token) return pedirClave();
+  }
+  try {
+    await arrancar();
+  } catch (err) {
+    if (LOCAL) estado("No se pudo cargar el catálogo", "mal");
+    else pedirClave(err.status === 401 || err.status === 403 ? err.message : "No se pudo cargar el catálogo. Intenta de nuevo.");
+  }
+})();
+</script>
+</body>
+</html>
