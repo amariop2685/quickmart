@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>QuickMart</title>
+<meta name="description" content="Pide desde tu celular. Te lo llevamos a tu puerta.">
+<meta name="theme-color" content="#d90b16">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="QuickMart">
+<meta name="mobile-web-app-capable" content="yes">
 <style>
   :root {
     /* Colores de la marca QuickMart: rojo para las acciones, azul marino para el texto */
@@ -177,6 +185,15 @@
   .pedidoViejo .cuando { font-weight: 700; display: flex; justify-content: space-between; gap: 12px; }
   .pedidoViejo .que { color: var(--suave); font-size: .9rem; }
   .pedidoViejo .secundario { justify-self: start; padding: 8px 14px; margin-top: 4px; }
+  .instalar {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    background: var(--verde-claro); border-radius: 10px; padding: 10px 12px; margin: 14px 0 0; font-size: .9rem;
+  }
+  .instalar button {
+    flex: none; font: inherit; font-weight: 700; cursor: pointer; border-radius: 10px; padding: 8px 14px;
+    background: var(--texto); color: #fff; border: 0;
+  }
+  .instalar .cerrar { background: none; color: var(--suave); padding: 8px; font-weight: 400; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -195,6 +212,14 @@
   <p class="aviso" id="avisoConfig" hidden>
     Falta configurar el número de WhatsApp. Por ahora el pedido se muestra en pantalla en vez de enviarse.
   </p>
+
+  <div class="instalar" id="instalar" hidden>
+    <span id="instalarTexto">Instala QuickMart en tu celular para pedir más rápido.</span>
+    <span style="display:flex;flex:none">
+      <button type="button" id="instalarBoton">Instalar</button>
+      <button type="button" class="cerrar" id="instalarCerrar" aria-label="Cerrar">✕</button>
+    </span>
+  </div>
 
   <div class="pestanas" id="pestanas" role="tablist">
     <button type="button" role="tab" id="tabProductos" aria-selected="true">Productos</button>
@@ -977,6 +1002,40 @@ async function pintarHistorial() {
     }
     return caja;
   }));
+}
+
+// --- app instalable ---
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+const YA_INSTALADA = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const CLAVE_INSTALAR = "quickmart-instalar-cerrado";
+let avisoInstalar = null;
+function instalarCerrado() { try { return localStorage.getItem(CLAVE_INSTALAR) === "1"; } catch (e) { return false; } }
+
+// Android y computador: el navegador avisa cuando la app se puede instalar.
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  avisoInstalar = e;
+  if (!instalarCerrado()) $("instalar").hidden = false;
+});
+window.addEventListener("appinstalled", () => { $("instalar").hidden = true; });
+$("instalarBoton").onclick = async () => {
+  if (!avisoInstalar) return;
+  avisoInstalar.prompt();
+  await avisoInstalar.userChoice;
+  avisoInstalar = null;
+  $("instalar").hidden = true;
+};
+$("instalarCerrar").onclick = () => {
+  $("instalar").hidden = true;
+  try { localStorage.setItem(CLAVE_INSTALAR, "1"); } catch (e) { /* ignorar */ }
+};
+// iPhone y iPad no avisan: se instala a mano desde el menú Compartir.
+const ES_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+if (ES_IOS && !YA_INSTALADA && !instalarCerrado()) {
+  $("instalarTexto").textContent = "Para instalar QuickMart: toca Compartir y luego “Agregar a inicio”.";
+  $("instalarBoton").hidden = true;
+  $("instalar").hidden = false;
 }
 
 // --- inicio ---
