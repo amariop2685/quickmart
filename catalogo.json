@@ -1,0 +1,185 @@
+{
+  "config": {
+    "nombre": "QuickMart",
+    "bajada": "Te lo llevamos a tu puerta.",
+    "whatsapp": "",
+    "tarifa": 2500,
+    "minimo": 0,
+    "horario": "Entregas sábados y domingos, de 10:00 a 20:00.",
+    "edificios": [
+      "Edificio 1",
+      "Edificio 2",
+      "Edificio 3"
+    ]
+  },
+  "productos": [
+    {
+      "id": "p01",
+      "nombre": "Pan de molde blanco",
+      "formato": "bolsa 500 g",
+      "precio": 2200,
+      "cat": "Panadería",
+      "marca": "Marca de ejemplo",
+      "imagen": "img/ejemplo.svg"
+    },
+    {
+      "id": "p02",
+      "nombre": "Marraqueta",
+      "formato": "1 kg",
+      "precio": 2300,
+      "cat": "Panadería"
+    },
+    {
+      "id": "p03",
+      "nombre": "Leche entera",
+      "formato": "caja 1 L",
+      "precio": 1150,
+      "cat": "Lácteos y huevos"
+    },
+    {
+      "id": "p04",
+      "nombre": "Huevos",
+      "formato": "bandeja 12 un.",
+      "precio": 3600,
+      "cat": "Lácteos y huevos"
+    },
+    {
+      "id": "p05",
+      "nombre": "Mantequilla",
+      "formato": "250 g",
+      "precio": 2900,
+      "cat": "Lácteos y huevos"
+    },
+    {
+      "id": "p06",
+      "nombre": "Queso laminado",
+      "formato": "250 g",
+      "precio": 3200,
+      "cat": "Lácteos y huevos"
+    },
+    {
+      "id": "p07",
+      "nombre": "Arroz",
+      "formato": "1 kg",
+      "precio": 1500,
+      "cat": "Despensa"
+    },
+    {
+      "id": "p08",
+      "nombre": "Fideos",
+      "formato": "400 g",
+      "precio": 900,
+      "cat": "Despensa"
+    },
+    {
+      "id": "p09",
+      "nombre": "Aceite vegetal",
+      "formato": "900 ml",
+      "precio": 2400,
+      "cat": "Despensa"
+    },
+    {
+      "id": "p10",
+      "nombre": "Azúcar",
+      "formato": "1 kg",
+      "precio": 1300,
+      "cat": "Despensa"
+    },
+    {
+      "id": "p11",
+      "nombre": "Té en bolsitas",
+      "formato": "caja 100 un.",
+      "precio": 2600,
+      "cat": "Despensa"
+    },
+    {
+      "id": "p12",
+      "nombre": "Agua mineral sin gas",
+      "formato": "1,6 L",
+      "precio": 950,
+      "cat": "Bebidas"
+    },
+    {
+      "id": "p13",
+      "nombre": "Bebida cola",
+      "formato": "1,5 L",
+      "precio": 1900,
+      "cat": "Bebidas"
+    },
+    {
+      "id": "p14",
+      "nombre": "Jugo en caja",
+      "formato": "1 L",
+      "precio": 1400,
+      "cat": "Bebidas"
+    },
+    {
+      "id": "p15",
+      "nombre": "Papel higiénico",
+      "formato": "pack 4 rollos",
+      "precio": 2500,
+      "cat": "Aseo"
+    },
+    {
+      "id": "p16",
+      "nombre": "Lavaloza",
+      "formato": "500 ml",
+      "precio": 1600,
+      "cat": "Aseo"
+    },
+    {
+      "id": "p17",
+      "nombre": "Detergente líquido",
+      "formato": "3 L",
+      "precio": 6500,
+      "cat": "Aseo"
+    },
+    {
+      "id": "p18",
+      "nombre": "Cloro",
+      "formato": "1 L",
+      "precio": 1100,
+      "cat": "Aseo"
+    },
+    {
+      "id": "p19",
+      "nombre": "Tomate",
+      "formato": "1 kg",
+      "precio": 1800,
+      "cat": "Frutas y verduras"
+    },
+    {
+      "id": "p20",
+      "nombre": "Palta",
+      "formato": "1 kg",
+      "precio": 4500,
+      "cat": "Frutas y verduras"
+    },
+    {
+      "id": "p21",
+      "nombre": "Plátano",
+      "formato": "1 kg",
+      "precio": 1400,
+      "cat": "Frutas y verduras"
+    },
+    {
+      "id": "p22",
+      "nombre": "Limón",
+      "formato": "1 kg",
+      "precio": 1600,
+      "cat": "Frutas y verduras"
+    }
+  ],
+  "servicios": [
+    {
+      "nombre": "Instalación de cortinas",
+      "detalle": "Roller, blackout y rieles. Queda nivelado y limpio.",
+      "precio": "Desde $10.000 por cortina"
+    },
+    {
+      "nombre": "Armado de muebles",
+      "detalle": "Clósets, camas, escritorios, racks y muebles de cocina.",
+      "precio": "Desde $15.000"
+    }
+  ]
+}

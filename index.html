@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuickMart</title>
+<style>
+  :root {
+    /* Colores de la marca QuickMart: rojo para las acciones, azul marino para el texto */
+    --fondo: #f4f5f9;
+    --tarjeta: #ffffff;
+    --texto: #0b1a4a;
+    --suave: #5b6482;
+    --borde: #dfe2ec;
+    --verde: #d90b16;
+    --verde-osc: #b00812;
+    --verde-claro: #eef0f8;
+    --alerta: #9a5b00;
+    --alerta-fondo: #fff4dc;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--fondo);
+    color: var(--texto);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding-bottom: 96px;
+  }
+  .ancho { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+  header { background: #fff; padding: 16px 0 16px; border-bottom: 4px solid var(--verde); }
+  header h1 { margin: 0 0 6px; line-height: 0; }
+  header h1 img { display: block; width: 100%; max-width: 260px; height: auto; margin-left: -6px; }
+  header p { margin: 0; font-size: 1rem; font-weight: 600; }
+  .pasos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; font-size: .85rem; }
+  .pasos span { background: var(--texto); color: #fff; padding: 4px 10px; border-radius: 999px; }
+
+  .aviso {
+    background: var(--alerta-fondo); color: var(--alerta);
+    border-radius: 10px; padding: 10px 12px; margin: 14px 0 0; font-size: .9rem;
+  }
+  .buscador { margin: 16px 0 10px; }
+  input, select, textarea {
+    width: 100%; font: inherit; font-weight: 400; color: inherit;
+    background: var(--tarjeta); border: 1px solid var(--borde);
+    border-radius: 10px; padding: 11px 12px;
+  }
+  input:focus, select:focus, textarea:focus, button:focus-visible {
+    outline: 2px solid var(--verde); outline-offset: 1px;
+  }
+  .filtros { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+  .filtros button {
+    flex: none; font: inherit; font-size: .9rem; cursor: pointer;
+    background: var(--tarjeta); color: var(--texto);
+    border: 1px solid var(--borde); border-radius: 999px; padding: 7px 14px;
+  }
+  .filtros button[aria-pressed="true"] { background: var(--verde); border-color: var(--verde); color: #fff; }
+
+  h2 { font-size: 1.1rem; margin: 22px 0 10px; }
+  .lista { display: grid; gap: 8px; }
+  .producto {
+    background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px;
+    padding: 10px 12px; display: flex; align-items: center; gap: 10px;
+  }
+  .producto .foto {
+    flex: none; width: 56px; height: 56px; border-radius: 10px; object-fit: cover;
+    background: var(--verde-claro); color: var(--suave);
+    display: grid; place-items: center; font-weight: 700; font-size: 1.2rem;
+  }
+  .producto .marca {
+    color: var(--suave); font-size: .72rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .producto .datos { flex: 1; min-width: 0; }
+  .producto .nombre { font-weight: 600; }
+  .producto .formato { color: var(--suave); font-size: .88rem; }
+  .producto .precio { font-weight: 700; white-space: nowrap; margin-top: 2px; }
+  .producto .nombre { line-height: 1.25; }
+  .cantidad { display: flex; align-items: center; gap: 6px; }
+  .cantidad button, .agregar {
+    font: inherit; cursor: pointer; border-radius: 10px; border: 1px solid var(--verde);
+    min-width: 40px; height: 40px;
+  }
+  .cantidad button { background: var(--tarjeta); color: var(--verde); font-size: 1.2rem; font-weight: 700; }
+  .cantidad output { min-width: 22px; text-align: center; font-weight: 700; }
+  .agregar { background: var(--verde); color: #fff; padding: 0 14px; font-weight: 600; }
+  .vacio { color: var(--suave); padding: 14px 0; }
+
+  .caja { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 14px; }
+  .linea { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
+  .linea.total { border-top: 1px solid var(--borde); margin-top: 6px; padding-top: 10px; font-weight: 700; font-size: 1.05rem; }
+  .nota { color: var(--suave); font-size: .86rem; margin: 8px 0 0; }
+  form { display: grid; gap: 12px; margin-top: 14px; }
+  label { display: grid; gap: 5px; font-size: .92rem; font-weight: 600; }
+  .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .enviar {
+    font: inherit; font-weight: 700; font-size: 1.05rem; cursor: pointer;
+    background: var(--verde); color: #fff; border: 0; border-radius: 12px; padding: 14px;
+  }
+  .enviar:hover, .agregar:hover { background: var(--verde-osc); }
+  .error { color: #b3261e; font-size: .92rem; min-height: 1.2em; margin: 0; }
+  pre.mensaje {
+    white-space: pre-wrap; background: var(--verde-claro); border-radius: 10px;
+    padding: 12px; font: inherit; font-size: .92rem; margin: 10px 0 0;
+  }
+
+  .barra {
+    position: fixed; left: 0; right: 0; bottom: 0; background: var(--tarjeta);
+    border-top: 1px solid var(--borde); padding: 10px 0; box-shadow: 0 -4px 14px rgba(0,0,0,.06);
+  }
+  .barra .ancho { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .barra a {
+    background: var(--verde); color: #fff; text-decoration: none; font-weight: 700;
+    padding: 12px 18px; border-radius: 12px; white-space: nowrap;
+  }
+  .barra small { color: var(--suave); display: block; }
+  .pestanas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+  .pestanas button {
+    font: inherit; font-weight: 700; cursor: pointer; padding: 11px;
+    background: var(--tarjeta); color: var(--texto);
+    border: 1px solid var(--borde); border-radius: 12px;
+  }
+  .pestanas button[aria-selected="true"] { background: var(--texto); border-color: var(--texto); color: #fff; }
+  .producto.elegido { border-color: var(--verde); box-shadow: 0 0 0 1px var(--verde); }
+  .producto .desde { color: var(--texto); font-size: .9rem; font-weight: 600; margin-top: 2px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="ancho">
+    <h1><img id="logo" src="logo.webp" width="2000" height="667" alt=""></h1>
+    <p id="bajada"></p>
+    <div class="pasos"><span>1. Elige</span><span>2. Indica tu depto</span><span>3. Envía por WhatsApp</span></div>
+  </div>
+</header>
+
+<main class="ancho">
+  <p class="aviso" id="avisoConfig" hidden>
+    Falta configurar el número de WhatsApp. Por ahora el pedido se muestra en pantalla en vez de enviarse.
+  </p>
+
+  <div class="pestanas" role="tablist">
+    <button type="button" role="tab" id="tabProductos" aria-selected="true">Productos</button>
+    <button type="button" role="tab" id="tabServicios" aria-selected="false">Servicios</button>
+  </div>
+
+  <section id="vistaProductos">
+  <div class="buscador">
+    <input id="buscar" type="search" placeholder="Buscar producto…" aria-label="Buscar producto">
+  </div>
+  <div class="filtros" id="filtros"></div>
+
+  <div class="lista" id="lista" style="margin-top:12px"></div>
+  <p class="vacio" id="sinResultados" hidden>No hay productos con ese nombre. Puedes pedirlo abajo, en “¿Algo que no está en la lista?”.</p>
+
+  <h2 id="pedido">Tu pedido</h2>
+  <div class="caja">
+    <div id="resumen"></div>
+    <div class="linea"><span>Subtotal referencial</span><span id="subtotal"></span></div>
+    <div class="linea"><span>Despacho</span><span id="tarifa"></span></div>
+    <div class="linea total"><span>Total estimado</span><span id="total"></span></div>
+    <p class="nota">Los precios son referenciales. El total final se confirma por WhatsApp antes de la entrega.</p>
+  </div>
+
+  <form id="form" novalidate>
+    <label>¿Algo que no está en la lista?
+      <textarea id="otros" rows="2" placeholder="Ej.: 1 detergente líquido 3 L, marca indiferente"></textarea>
+    </label>
+    <label>Tu nombre
+      <input id="nombre" autocomplete="given-name" required>
+    </label>
+    <div class="dos">
+      <label>Edificio
+        <select id="edificio" required></select>
+      </label>
+      <label>Depto
+        <input id="depto" inputmode="text" required>
+      </label>
+    </div>
+    <label>Forma de pago
+      <select id="pago">
+        <option>Transferencia</option>
+        <option>Efectivo al recibir</option>
+      </select>
+    </label>
+    <p class="error" id="error" role="alert"></p>
+    <button class="enviar" type="submit">Enviar pedido por WhatsApp</button>
+    <p class="nota" id="horario"></p>
+  </form>
+
+  <div id="vistaMensaje" hidden>
+    <h2>Así llegaría tu pedido</h2>
+    <pre class="mensaje" id="mensaje"></pre>
+  </div>
+  </section>
+
+  <section id="vistaServicios" hidden>
+    <h2>Servicios en tu edificio</h2>
+    <div class="lista" id="listaServicios"></div>
+
+    <form id="formServicio" novalidate>
+      <label>Cuéntanos qué necesitas
+        <textarea id="sDetalle" rows="3" placeholder="Ej.: 3 cortinas roller, living y dormitorio. Prefiero sábado en la mañana."></textarea>
+      </label>
+      <label>Tu nombre
+        <input id="sNombre" autocomplete="given-name" required>
+      </label>
+      <div class="dos">
+        <label>Edificio
+          <select id="sEdificio" required></select>
+        </label>
+        <label>Depto
+          <input id="sDepto" inputmode="text" required>
+        </label>
+      </div>
+      <p class="error" id="sError" role="alert"></p>
+      <button class="enviar" type="submit">Solicitar por WhatsApp</button>
+      <p class="nota">Te confirmamos precio y horario por WhatsApp antes de ir.</p>
+    </form>
+
+    <div id="sVistaMensaje" hidden>
+      <h2>Así llegaría tu solicitud</h2>
+      <pre class="mensaje" id="sMensaje"></pre>
+    </div>
+  </section>
+</main>
+
+<div class="barra" id="barra" hidden>
+  <div class="ancho">
+    <div><strong id="barraTotal"></strong><small id="barraItems"></small></div>
+    <a href="#pedido">Ver pedido</a>
+  </div>
+</div>
+
+<script>
+// El catálogo (datos del negocio, productos y servicios) vive en catalogo.json
+// y se edita desde la pantalla de administración.
+let CONFIG = {}, PRODUCTOS = [], SERVICIOS = [];
+
+const $ = (id) => document.getElementById(id);
+const pesos = (n) => "$" + n.toLocaleString("es-CL");
+const CLAVE = "pedidos-depto-v1";
+
+let carrito = {};          // { idProducto: cantidad }
+let categoria = "Todo";
+let vista = "productos";   // "productos" o "servicios"
+let servicioElegido = "";
+
+// --- memoria local: recuerda el carrito y los datos del vecino en su celular ---
+function cargar() {
+  try {
+    const g = JSON.parse(localStorage.getItem(CLAVE) || "{}");
+    if (g.carrito) {
+      for (const id in g.carrito) {
+        if (PRODUCTOS.some((p) => p.id === id) && g.carrito[id] > 0) carrito[id] = g.carrito[id];
+      }
+    }
+    $("nombre").value = g.nombre || "";
+    $("depto").value = g.depto || "";
+    if (g.edificio && CONFIG.edificios.includes(g.edificio)) $("edificio").value = g.edificio;
+  } catch (e) { /* sin memoria local: la página funciona igual */ }
+}
+function guardar() {
+  try {
+    localStorage.setItem(CLAVE, JSON.stringify({
+      carrito, nombre: $("nombre").value, depto: $("depto").value, edificio: $("edificio").value,
+    }));
+  } catch (e) { /* ignorar */ }
+}
+
+// --- catálogo ---
+function crear(etiqueta, clase, texto) {
+  const el = document.createElement(etiqueta);
+  if (clase) el.className = clase;
+  if (texto !== undefined) el.textContent = texto;
+  return el;
+}
+
+function pintarFiltros() {
+  const cats = ["Todo", ...new Set(PRODUCTOS.map((p) => p.cat))];
+  $("filtros").replaceChildren(...cats.map((c) => {
+    const b = crear("button", "", c);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(c === categoria));
+    b.onclick = () => { categoria = c; pintarFiltros(); pintarLista(); };
+    return b;
+  }));
+}
+
+function cambiar(id, delta) {
+  const n = Math.max(0, Math.min(99, (carrito[id] || 0) + delta));
+  if (n === 0) delete carrito[id]; else carrito[id] = n;
+  pintarLista(); pintarResumen(); guardar();
+}
+
+function controlCantidad(p) {
+  const n = carrito[p.id] || 0;
+  if (n === 0) {
+    const b = crear("button", "agregar", "Agregar");
+    b.type = "button";
+    b.setAttribute("aria-label", "Agregar " + p.nombre);
+    b.onclick = () => cambiar(p.id, 1);
+    return b;
+  }
+  const caja = crear("div", "cantidad");
+  const menos = crear("button", "", "−");
+  const mas = crear("button", "", "+");
+  menos.type = mas.type = "button";
+  menos.setAttribute("aria-label", "Quitar uno de " + p.nombre);
+  mas.setAttribute("aria-label", "Agregar uno de " + p.nombre);
+  menos.onclick = () => cambiar(p.id, -1);
+  mas.onclick = () => cambiar(p.id, 1);
+  caja.append(menos, crear("output", "", String(n)), mas);
+  return caja;
+}
+
+// Nombre completo para el resumen y el mensaje: incluye la marca si existe.
+const titulo = (p) => p.nombre + (p.marca ? " " + p.marca : "");
+
+function sinFoto(p) {
+  const caja = crear("div", "foto", p.nombre.charAt(0).toUpperCase());
+  caja.setAttribute("aria-hidden", "true");
+  return caja;
+}
+function foto(p) {
+  if (!p.imagen) return sinFoto(p);
+  const img = crear("img", "foto");
+  img.src = p.imagen;
+  img.alt = "";
+  img.loading = "lazy";
+  img.width = img.height = 56;
+  img.onerror = () => img.replaceWith(sinFoto(p));   // si el archivo no existe, muestra la inicial
+  return img;
+}
+
+function pintarLista() {
+  const q = $("buscar").value.trim().toLowerCase();
+  const visibles = PRODUCTOS.filter((p) =>
+    (categoria === "Todo" || p.cat === categoria) &&
+    (!q || (p.nombre + " " + (p.marca || "") + " " + p.formato).toLowerCase().includes(q)));
+  $("lista").replaceChildren(...visibles.map((p) => {
+    const fila = crear("div", "producto");
+    const datos = crear("div", "datos");
+    if (p.marca) datos.append(crear("div", "marca", p.marca));
+    datos.append(crear("div", "nombre", p.nombre), crear("div", "formato", p.formato),
+                 crear("div", "precio", pesos(p.precio)));
+    fila.append(foto(p), datos, controlCantidad(p));
+    return fila;
+  }));
+  $("sinResultados").hidden = visibles.length > 0;
+}
+
+// --- resumen y totales ---
+function elegidos() {
+  return PRODUCTOS.filter((p) => carrito[p.id]).map((p) => ({ ...p, n: carrito[p.id] }));
+}
+function totales() {
+  const items = elegidos();
+  const subtotal = items.reduce((s, p) => s + p.precio * p.n, 0);
+  const unidades = items.reduce((s, p) => s + p.n, 0);
+  return { items, subtotal, unidades, total: subtotal + CONFIG.tarifa };
+}
+
+function pintarResumen() {
+  const t = totales();
+  if (t.items.length === 0) {
+    $("resumen").replaceChildren(crear("p", "vacio", "Aún no agregas productos."));
+  } else {
+    $("resumen").replaceChildren(...t.items.map((p) => {
+      const l = crear("div", "linea");
+      l.append(crear("span", "", p.n + " × " + titulo(p) + " (" + p.formato + ")"),
+               crear("span", "", pesos(p.precio * p.n)));
+      return l;
+    }));
+  }
+  $("subtotal").textContent = pesos(t.subtotal);
+  $("tarifa").textContent = pesos(CONFIG.tarifa);
+  $("total").textContent = pesos(t.total);
+  $("barra").hidden = t.unidades === 0 || vista !== "productos";
+  $("barraTotal").textContent = pesos(t.total);
+  $("barraItems").textContent = t.unidades + (t.unidades === 1 ? " producto" : " productos") + " + despacho";
+}
+
+// --- envío ---
+function armarMensaje() {
+  const t = totales();
+  const otros = $("otros").value.trim();
+  const lineas = [
+    "Pedido — " + $("edificio").value + ", depto " + $("depto").value.trim(),
+    "Nombre: " + $("nombre").value.trim(),
+    "",
+    ...t.items.map((p) => "• " + p.n + " × " + titulo(p) + " (" + p.formato + ") — " + pesos(p.precio * p.n)),
+  ];
+  if (otros) lineas.push("• Otros: " + otros);
+  lineas.push(
+    "",
+    "Subtotal referencial: " + pesos(t.subtotal),
+    "Despacho: " + pesos(CONFIG.tarifa),
+    "Total estimado: " + pesos(t.total),
+    "Pago: " + $("pago").value,
+  );
+  return lineas.join("\n");
+}
+
+function validar() {
+  const t = totales();
+  if (t.items.length === 0 && !$("otros").value.trim()) return "Agrega al menos un producto o escribe lo que necesitas.";
+  if (CONFIG.minimo > 0 && t.subtotal < CONFIG.minimo) return "El pedido mínimo es " + pesos(CONFIG.minimo) + ".";
+  if (!$("nombre").value.trim()) return "Escribe tu nombre.";
+  if (!$("edificio").value) return "Elige tu edificio.";
+  if (!$("depto").value.trim()) return "Escribe tu número de depto.";
+  return "";
+}
+
+$("form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const error = validar();
+  $("error").textContent = error;
+  if (error) return;
+  guardar();
+  const mensaje = armarMensaje();
+  const numero = CONFIG.whatsapp.replace(/\D/g, "");
+  if (!numero) {
+    $("mensaje").textContent = mensaje;
+    $("vistaMensaje").hidden = false;
+    $("vistaMensaje").scrollIntoView({ behavior: "smooth" });
+    return;
+  }
+  window.location.href = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensaje);
+});
+
+// --- servicios ---
+function mostrarVista(cual) {
+  vista = cual;
+  $("vistaProductos").hidden = cual !== "productos";
+  $("vistaServicios").hidden = cual !== "servicios";
+  $("tabProductos").setAttribute("aria-selected", String(cual === "productos"));
+  $("tabServicios").setAttribute("aria-selected", String(cual === "servicios"));
+  pintarResumen();
+}
+
+function pintarServicios() {
+  $("listaServicios").replaceChildren(...SERVICIOS.map((s) => {
+    const elegido = s.nombre === servicioElegido;
+    const fila = crear("div", "producto" + (elegido ? " elegido" : ""));
+    const datos = crear("div", "datos");
+    datos.append(crear("div", "nombre", s.nombre), crear("div", "formato", s.detalle), crear("div", "desde", s.precio));
+    const b = crear("button", "agregar", elegido ? "Elegido ✓" : "Elegir");
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(elegido));
+    b.onclick = () => { servicioElegido = elegido ? "" : s.nombre; pintarServicios(); };
+    fila.append(datos, b);
+    return fila;
+  }));
+}
+
+$("formServicio").addEventListener("submit", (e) => {
+  e.preventDefault();
+  let error = "";
+  if (!servicioElegido) error = "Elige un servicio de la lista.";
+  else if (!$("sNombre").value.trim()) error = "Escribe tu nombre.";
+  else if (!$("sEdificio").value) error = "Elige tu edificio.";
+  else if (!$("sDepto").value.trim()) error = "Escribe tu número de depto.";
+  $("sError").textContent = error;
+  if (error) return;
+  guardar();
+  const detalle = $("sDetalle").value.trim();
+  const lineas = [
+    "Solicitud de servicio — " + $("sEdificio").value + ", depto " + $("sDepto").value.trim(),
+    "Nombre: " + $("sNombre").value.trim(),
+    "",
+    "Servicio: " + servicioElegido,
+  ];
+  if (detalle) lineas.push("Detalle: " + detalle);
+  const mensaje = lineas.join("\n");
+  const numero = CONFIG.whatsapp.replace(/\D/g, "");
+  if (!numero) {
+    $("sMensaje").textContent = mensaje;
+    $("sVistaMensaje").hidden = false;
+    $("sVistaMensaje").scrollIntoView({ behavior: "smooth" });
+    return;
+  }
+  window.location.href = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensaje);
+});
+
+// --- inicio ---
+const GEMELOS = [["nombre", "sNombre"], ["depto", "sDepto"], ["edificio", "sEdificio"]];
+
+async function iniciar() {
+  try {
+    const r = await fetch("catalogo.json", { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const c = await r.json();
+    CONFIG = c.config || {};
+    PRODUCTOS = Array.isArray(c.productos) ? c.productos : [];
+    SERVICIOS = Array.isArray(c.servicios) ? c.servicios : [];
+  } catch (e) {
+    $("avisoConfig").textContent = "No se pudo cargar el catálogo. Intenta de nuevo en unos minutos.";
+    $("avisoConfig").hidden = false;
+    return;
+  }
+  CONFIG.nombre = CONFIG.nombre || "Pedidos";
+  CONFIG.whatsapp = String(CONFIG.whatsapp || "");
+  CONFIG.tarifa = Number(CONFIG.tarifa) || 0;
+  CONFIG.minimo = Number(CONFIG.minimo) || 0;
+  CONFIG.edificios = Array.isArray(CONFIG.edificios) ? CONFIG.edificios : [];
+  PRODUCTOS.forEach((p, i) => { if (!p.id) p.id = "p" + i; p.precio = Number(p.precio) || 0; });
+
+  document.title = CONFIG.nombre;
+  $("logo").alt = CONFIG.nombre;
+  $("bajada").textContent = CONFIG.bajada || "";
+  $("horario").textContent = CONFIG.horario || "";
+  $("avisoConfig").hidden = Boolean(CONFIG.whatsapp.replace(/\D/g, ""));
+  $("edificio").append(new Option("Elige…", ""), ...CONFIG.edificios.map((n) => new Option(n, n)));
+  $("sEdificio").append(new Option("Elige…", ""), ...CONFIG.edificios.map((n) => new Option(n, n)));
+  $("buscar").addEventListener("input", pintarLista);
+  // Nombre, edificio y depto se comparten entre Productos y Servicios.
+  GEMELOS.forEach(([a, b]) => {
+    $(a).addEventListener("change", () => { $(b).value = $(a).value; guardar(); });
+    $(b).addEventListener("change", () => { $(a).value = $(b).value; guardar(); });
+  });
+  $("tabProductos").onclick = () => mostrarVista("productos");
+  $("tabServicios").onclick = () => mostrarVista("servicios");
+  $("tabServicios").hidden = SERVICIOS.length === 0;
+  cargar();
+  GEMELOS.forEach(([a, b]) => { $(b).value = $(a).value; });
+  pintarServicios();
+  pintarFiltros();
+  pintarLista();
+  pintarResumen();
+}
+iniciar();
+</script>
+</body>
+</html>
