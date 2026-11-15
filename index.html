@@ -307,6 +307,18 @@
           <option>Efectivo al recibir</option>
         </select>
       </label>
+      <div class="caja" id="cajaTransferencia" style="display:grid;gap:10px">
+        <div id="datosBanco" hidden>
+          <b style="font-size:.92rem">Transfiere <span id="montoTransferir"></span> a:</b>
+          <pre class="mensaje" id="textoBanco" style="margin-top:6px"></pre>
+          <p class="nota">Si el total final cambia, ajustamos la diferencia por WhatsApp.</p>
+        </div>
+        <label id="cajaComprobante" hidden>Comprobante de la transferencia (opcional)
+          <input id="comprobante" type="file" accept="image/*,application/pdf">
+        </label>
+        <p class="ok" id="comprobanteOk" role="status"></p>
+        <p class="error" id="comprobanteError" role="alert" style="min-height:0"></p>
+      </div>
       <p class="error" id="error" role="alert"></p>
       <div class="acciones" style="margin-top:0">
         <button class="enviar" type="submit" id="irEnviar">Paso 3: revisar y enviar →</button>
@@ -650,7 +662,7 @@ function pintarConfirmacion() {
   $("total3").textContent = pesos(t.total);
   $("datosEntrega").replaceChildren(
     dato("Entregar a", $("nombre").value.trim() + " — " + $("edificio").value + ", depto " + $("depto").value.trim()),
-    dato("Forma de pago", $("pago").value));
+    dato("Forma de pago", $("pago").value + (conComprobante() ? " — comprobante adjunto ✓" : "")));
   $("error3").textContent = "";
   $("vistaMensaje").hidden = true;
 }
@@ -665,7 +677,7 @@ function mostrarPaso(n, mover) {
   $("pasos").querySelectorAll("button").forEach((s) => {
     if (Number(s.dataset.paso) === n) s.setAttribute("aria-current", "step"); else s.removeAttribute("aria-current");
   });
-  if (n === 2) pintarPaso2();
+  if (n === 2) { pintarPaso2(); pintarTransferencia(); }
   if (n === 3) { pintarConfirmacion(); pintarNotaCuenta(); }
   if (mover) (n === 1 ? document.body : $("paso" + n)).scrollIntoView();
 }
@@ -699,8 +711,9 @@ $("irDatos").onclick = () => {
 };
 $("form").addEventListener("submit", (e) => {
   e.preventDefault();
-  const error = errorPaso2();
+  const error = errorPaso2() || (subiendoComprobante ? "Espera un momento: el comprobante se está subiendo." : "");
   $("error").textContent = error;
+  if (error && subiendoComprobante) return;
   if (error) { editando = true; pintarPaso2(); return; }
   guardar();
   guardarPerfil();
@@ -709,6 +722,58 @@ $("form").addEventListener("submit", (e) => {
 });
 document.querySelectorAll(".volver[data-ir]").forEach((b) => {
   b.onclick = () => { if (b.dataset.ir === "2") editando = true; irPaso(Number(b.dataset.ir)); };
+});
+
+// --- pago con transferencia: datos de la cuenta y comprobante ---
+let comprobanteUrl = "";
+let subiendoComprobante = false;
+const conComprobante = () => $("pago").value === "Transferencia" && Boolean(comprobanteUrl);
+
+function pintarTransferencia() {
+  const esTransferencia = $("pago").value === "Transferencia";
+  const banco = String(CONFIG.transferencia || "").trim();
+  $("datosBanco").hidden = !banco;
+  $("textoBanco").textContent = banco;
+  $("montoTransferir").textContent = pesos(totales().total);
+  $("cajaComprobante").hidden = !nube;
+  $("cajaTransferencia").hidden = !esTransferencia || (!banco && !nube);
+}
+$("pago").addEventListener("change", pintarTransferencia);
+
+// Las fotos se achican antes de subir: cargan rápido y gastan pocos datos del celular.
+async function prepararComprobante(archivo) {
+  if (archivo.type === "application/pdf") return { blob: archivo, ext: "pdf", tipo: "application/pdf" };
+  const img = await createImageBitmap(archivo);
+  const escala = Math.min(1, 1600 / Math.max(img.width, img.height));
+  const lienzo = document.createElement("canvas");
+  lienzo.width = Math.round(img.width * escala); lienzo.height = Math.round(img.height * escala);
+  lienzo.getContext("2d").drawImage(img, 0, 0, lienzo.width, lienzo.height);
+  const blob = await new Promise((ok) => lienzo.toBlob(ok, "image/jpeg", 0.82));
+  return { blob, ext: "jpg", tipo: "image/jpeg" };
+}
+$("comprobante").addEventListener("change", async () => {
+  const archivo = $("comprobante").files[0];
+  comprobanteUrl = "";
+  $("comprobanteOk").textContent = ""; $("comprobanteError").textContent = "";
+  if (!archivo || !nube) return;
+  if (archivo.size > 10 * 1024 * 1024) { $("comprobanteError").textContent = "El archivo pesa demasiado. Usa una foto o captura de pantalla."; return; }
+  subiendoComprobante = true;
+  $("comprobanteOk").textContent = "Subiendo comprobante…";
+  try {
+    const { blob, ext, tipo } = await prepararComprobante(archivo);
+    const hoy = new Date().toISOString().slice(0, 10);
+    const ruta = hoy + "/" + crypto.randomUUID() + "." + ext;   // nombre imposible de adivinar
+    const { error } = await nube.storage.from("comprobantes").upload(ruta, blob, { contentType: tipo });
+    if (error) throw error;
+    comprobanteUrl = CUENTAS.url + "/storage/v1/object/public/comprobantes/" + ruta;
+    $("comprobanteOk").textContent = "Comprobante adjunto ✓";
+  } catch (e) {
+    $("comprobanteOk").textContent = "";
+    $("comprobanteError").textContent = "No se pudo subir el comprobante. Puedes continuar y enviarlo después por WhatsApp.";
+    $("comprobante").value = "";
+  } finally {
+    subiendoComprobante = false;
+  }
 });
 
 // --- envío ---
@@ -729,6 +794,7 @@ function armarMensaje() {
     "Total estimado: " + pesos(t.total),
     "Pago: " + $("pago").value,
   );
+  if (conComprobante()) lineas.push("Comprobante: " + comprobanteUrl);
   return lineas.join("\n");
 }
 

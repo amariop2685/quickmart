@@ -156,6 +156,10 @@
         <label>Pedido mínimo (pesos) <small>0 = sin mínimo</small><input id="nMinimo" type="number" min="0" step="100"></label>
       </div>
       <label>Horario de entregas <input id="nHorario"></label>
+      <label>Datos para transferencia
+        <small>Se muestran al cliente cuando elige pagar con transferencia: banco, tipo y número de cuenta, RUT, nombre y correo.</small>
+        <textarea id="nTransferencia" rows="5"></textarea>
+      </label>
       <label>Edificios que atiendes <small>Uno por línea.</small>
         <textarea id="nEdificios" rows="5"></textarea>
       </label>
@@ -542,6 +546,7 @@ function llenarNegocio() {
   $("nTarifa").value = c.tarifa ?? 0;
   $("nMinimo").value = c.minimo ?? 0;
   $("nHorario").value = c.horario || "";
+  $("nTransferencia").value = c.transferencia || "";
   $("nEdificios").value = (c.edificios || []).join("\n");
 }
 
@@ -556,12 +561,14 @@ $("formNegocio").addEventListener("submit", async (e) => {
   $("nError").textContent = error;
   if (error) return;
   datos.config = {
+    ...datos.config,   // conserva los datos que esta pantalla no edita
     nombre: $("nNombre").value.trim(),
     bajada: $("nBajada").value.trim(),
     whatsapp,
     tarifa: Math.max(0, Math.round(Number($("nTarifa").value) || 0)),
     minimo: Math.max(0, Math.round(Number($("nMinimo").value) || 0)),
     horario: $("nHorario").value.trim(),
+    transferencia: $("nTransferencia").value.trim().slice(0, 600),
     edificios,
   };
   if (await guardar()) llenarNegocio();
