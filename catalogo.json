@@ -15,12 +15,12 @@
   "productos": [
     {
       "id": "p01",
-      "nombre": "Pan de molde blanco",
-      "formato": "bolsa 500 g",
-      "precio": 2200,
+      "nombre": "Pan De Molde Grande Xl 1 Un",
+      "formato": "Bolsa 750 g",
+      "precio": 3490,
       "cat": "Panadería",
       "marca": "Ideal",
-      "imagen": "img/pan-de-molde-blanco-mwhemqjz.jpg"
+      "imagen": "img/pan-de-molde-grande-xl-1-un-mwhyd9vf.jpg"
     },
     {
       "id": "p02",
