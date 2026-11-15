@@ -263,9 +263,8 @@
   <div class="paso" id="paso2" hidden>
     <h2>Paso 2: tus datos</h2>
     <div id="p2Cuenta" hidden>
-      <div class="acciones">
-        <button type="button" class="secundario" id="sinCuenta">Continuar sin cuenta →</button>
-        <button type="button" class="volver" data-ir="1">← Volver a los productos</button>
+      <div class="acciones" id="p2Arriba" style="margin:0 0 6px">
+        <button type="button" class="secundario" id="sinCuenta">← Continuar sin cuenta</button>
       </div>
     </div>
     <form id="form" novalidate>
@@ -285,6 +284,19 @@
             <input id="depto" inputmode="text" required>
           </label>
         </div>
+        <div id="camposCuenta" style="display:grid;gap:12px" hidden>
+          <label>Teléfono
+            <input id="telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="+56 9 1234 5678">
+          </label>
+          <div class="dos">
+            <label>RUT (opcional)
+              <input id="rut" inputmode="text" autocomplete="off" placeholder="12.345.678-5">
+            </label>
+            <label>Nacimiento (opcional)
+              <input id="nacimiento" type="date" autocomplete="bday" min="1900-01-01">
+            </label>
+          </div>
+        </div>
       </div>
       <label>Forma de pago
         <select id="pago">
@@ -296,6 +308,10 @@
       <div class="acciones" style="margin-top:0">
         <button class="enviar" type="submit" id="irEnviar">Paso 3: revisar y enviar →</button>
         <button type="button" class="volver" data-ir="1">← Volver a los productos</button>
+      </div>
+      <div class="caja" id="ofertaCuenta" hidden>
+        <p class="nota" style="margin:0 0 8px">¿Quieres una cuenta? Guarda tus datos y repite tus pedidos con un toque. Es opcional.</p>
+        <button type="button" class="secundario" id="quieroCuenta" style="width:100%">Entrar o crear una cuenta</button>
       </div>
     </form>
   </div>
@@ -593,7 +609,26 @@ function errorPaso2() {
   if (!$("nombre").value.trim()) return "Escribe tu nombre.";
   if (!$("edificio").value) return "Elige tu edificio.";
   if (!$("depto").value.trim()) return "Escribe tu número de depto.";
+  if (sesion) {   // datos de la cuenta
+    if ($("telefono").value.replace(/\D/g, "").length < 8) return "Escribe tu teléfono.";
+    if ($("rut").value.trim() && !rutValido($("rut").value)) return "Revisa el RUT: no es válido.";
+    if ($("nacimiento").value && ($("nacimiento").value > new Date().toISOString().slice(0, 10) || $("nacimiento").value < "1900-01-01")) return "Revisa la fecha de nacimiento.";
+  }
   return "";
+}
+// RUT chileno: valida el dígito verificador (módulo 11).
+function limpiarRut(t) { return String(t).replace(/[^0-9kK]/g, "").toUpperCase(); }
+function rutValido(t) {
+  const r = limpiarRut(t);
+  if (!/^\d{7,8}[0-9K]$/.test(r)) return false;
+  let suma = 0, factor = 2;
+  for (let i = r.length - 2; i >= 0; i--) { suma += Number(r[i]) * factor; factor = factor === 7 ? 2 : factor + 1; }
+  const dv = 11 - (suma % 11);
+  return r.slice(-1) === (dv === 11 ? "0" : dv === 10 ? "K" : String(dv));
+}
+function formatoRut(t) {
+  const r = limpiarRut(t);
+  return r.length < 2 ? r : r.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + r.slice(-1);
 }
 
 function dato(etiqueta, valor) {
@@ -761,7 +796,7 @@ $("formServicio").addEventListener("submit", (e) => {
 let nube = null;        // cliente de Supabase
 let sesion = null;      // sesión del cliente, si entró
 let esperaCodigo = null; // { correo, tipo: "email" | "recovery" }
-let invitado = false;    // eligió continuar sin cuenta
+let quiereCuenta = false; // en el paso 2 eligió entrar o crear una cuenta
 let editando = false;    // pidió cambiar sus datos guardados
 let usuarioVisto = "";   // para cargar los datos de la cuenta una sola vez por sesión
 
@@ -807,48 +842,62 @@ async function iniciarCuentas() {
 
 // Los formularios de acceso son uno solo: se muestran en "Mi cuenta" o dentro del paso 2.
 function ubicarCuenta(enPaso2) {
-  (enPaso2 ? $("p2Cuenta") : $("vistaCuenta")).prepend($("cuentaFuera"), $("cuentaCodigo"));
+  if (enPaso2) $("p2Arriba").after($("cuentaFuera"), $("cuentaCodigo"));
+  else $("vistaCuenta").prepend($("cuentaFuera"), $("cuentaCodigo"));
 }
 
-// Nombre, edificio y depto guardados en la cuenta: se cargan al entrar.
+// Datos guardados en la cuenta: se cargan al entrar y se borran de la pantalla al salir.
+const PERFIL = ["nombre", "edificio", "depto", "telefono", "rut", "nacimiento"];
 function aplicarPerfil() {
   const id = sesion ? sesion.user.id : "";
   if (id === usuarioVisto) return;
   usuarioVisto = id;
-  if (!sesion) return;
+  if (!sesion) { $("telefono").value = ""; $("rut").value = ""; $("nacimiento").value = ""; return; }
   const m = sesion.user.user_metadata || {};
   if (m.nombre) $("nombre").value = m.nombre;
   if (m.depto) $("depto").value = m.depto;
   if (m.edificio && CONFIG.edificios.includes(m.edificio)) $("edificio").value = m.edificio;
+  $("telefono").value = m.telefono || "";
+  $("rut").value = m.rut || "";
+  $("nacimiento").value = m.nacimiento || "";
   GEMELOS.forEach(([a, b]) => { $(b).value = $(a).value; });
   editando = false;
+  quiereCuenta = false;
   guardar();
 }
 function guardarPerfil() {
   if (!nube || !sesion) return;
   const m = sesion.user.user_metadata || {};
-  const d = { nombre: $("nombre").value.trim().slice(0, 80), edificio: $("edificio").value.slice(0, 80), depto: $("depto").value.trim().slice(0, 20) };
-  if (m.nombre === d.nombre && m.edificio === d.edificio && m.depto === d.depto) return;
+  const d = {
+    nombre: $("nombre").value.trim().slice(0, 80), edificio: $("edificio").value.slice(0, 80), depto: $("depto").value.trim().slice(0, 20),
+    telefono: $("telefono").value.trim().slice(0, 20), rut: formatoRut($("rut").value), nacimiento: $("nacimiento").value,
+  };
+  if (PERFIL.every((k) => (m[k] || "") === d[k])) return;
   nube.auth.updateUser({ data: d }).catch(() => {});   // si falla, el pedido sigue igual
 }
 
-// Paso 2: sin sesión ofrece entrar o registrarse; con datos guardados solo pide confirmarlos.
+// Paso 2: primero el formulario sin cuenta, con la cuenta como opción; con datos guardados solo pide confirmarlos.
 function pintarPaso2() {
-  const pideCuenta = Boolean(nube) && !sesion && !invitado;
+  const pideCuenta = Boolean(nube) && !sesion && quiereCuenta;
   const confirma = Boolean(sesion) && !editando && !errorPaso2();
   if (pideCuenta) ubicarCuenta(true);
   $("p2Cuenta").hidden = !pideCuenta;
   $("form").hidden = pideCuenta;
+  $("ofertaCuenta").hidden = !nube || Boolean(sesion);
+  $("camposCuenta").hidden = !sesion;
   $("datosGuardados").hidden = !confirma;
   $("camposDatos").hidden = confirma;
   if (confirma) {
     $("datosGuardadosTexto").replaceChildren(
-      dato("Entregar a", $("nombre").value.trim() + " — " + $("edificio").value + ", depto " + $("depto").value.trim()));
+      dato("Entregar a", $("nombre").value.trim() + " — " + $("edificio").value + ", depto " + $("depto").value.trim()),
+      dato("Teléfono", $("telefono").value.trim()));
   }
   $("irEnviar").textContent = confirma ? "Están bien: revisar y enviar →" : "Paso 3: revisar y enviar →";
 }
-$("sinCuenta").onclick = () => { invitado = true; pintarPaso2(); };
+$("sinCuenta").onclick = () => { quiereCuenta = false; esperaCodigo = null; pintarCuenta(); };
+$("quieroCuenta").onclick = () => { quiereCuenta = true; pintarPaso2(); $("paso2").scrollIntoView(); };
 $("cambiarDatos").onclick = () => { editando = true; pintarPaso2(); $("nombre").focus(); };
+$("rut").addEventListener("blur", () => { if (rutValido($("rut").value)) $("rut").value = formatoRut($("rut").value); });
 
 function pintarCuenta() {
   aplicarPerfil();
