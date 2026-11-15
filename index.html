@@ -372,7 +372,7 @@
         <button class="enlace" type="button" id="cOlvide">Olvidé mi contraseña</button>
         <p class="error" id="cError" role="alert"></p>
         <p class="o">¿Primera vez?</p>
-        <label class="acepto">
+        <label class="acepto" id="cAceptoCaja">
           <input type="checkbox" id="cAcepto">
           <span>Acepto la <a href="privacidad.html" target="_blank" rel="noopener">política de privacidad</a></span>
         </label>
@@ -772,7 +772,7 @@ const ERRORES_CUENTA = [
   [/expired|invalid.*(token|otp)|otp.*invalid/i, "El código no es válido o ya venció. Pide uno nuevo."],
   [/rate limit|security purposes|too many/i, "Demasiados intentos. Espera un minuto y prueba de nuevo."],
   [/password should be|weak/i, "La contraseña debe tener al menos 8 caracteres."],
-  [/signups? not allowed for otp/i, "Ese correo aún no tiene cuenta. Para crearla, marca “Acepto la política de privacidad” (más abajo) y pulsa “Crear cuenta”."],
+  [/signups? not allowed for otp/i, "Es tu primera vez con este correo. Marca la casilla de aquí abajo y te enviamos el código."],
   [/signups? not allowed|not authorized/i, "Por ahora no se pueden crear cuentas con ese correo."],
   [/invalid.*email|email.*invalid/i, "Revisa el correo: no parece válido."],
   [/fetch|network/i, "No hay conexión. Intenta de nuevo."],
@@ -897,6 +897,8 @@ function mostrarError(idError, texto, boton) {
   el.scrollIntoView({ block: "center", behavior: "smooth" });
 }
 // Ejecuta una acción de cuenta: mientras tanto el botón dice "Enviando…"; si falla, muestra el error a su lado.
+let ultimoError = "";       // texto original del último error del servicio
+let codigoPendiente = null; // botón de código a la espera de que acepte la política
 async function intentar(idError, accion, boton) {
   mostrarError(idError, "");
   const texto = boton ? boton.textContent : "";
@@ -906,6 +908,7 @@ async function intentar(idError, accion, boton) {
     if (error) throw error;
     return data || {};
   } catch (e) {
+    ultimoError = (e && e.message) || "";
     mostrarError(idError, errorCuenta(e), boton);
     return null;
   } finally {
@@ -918,8 +921,15 @@ async function entrarConCodigo(boton) {
   if (!correo) return;
   // Solo crea una cuenta nueva si aceptó la política de privacidad.
   const crear = $("cAcepto").checked;
-  if (await intentar("cError", () => nube.auth.signInWithOtp({ email: correo, options: { shouldCreateUser: crear } }), boton))
+  codigoPendiente = null;
+  if (await intentar("cError", () => nube.auth.signInWithOtp({ email: correo, options: { shouldCreateUser: crear } }), boton)) {
     pedirCodigo(correo, "email", "Enviamos un código de 6 dígitos a");
+  } else if (/signups? not allowed for otp/i.test(ultimoError)) {
+    // Primera vez con este correo: sube la casilla junto al botón; al marcarla, el código se envía solo.
+    $("cError").after($("cAceptoCaja"));
+    codigoPendiente = boton;
+    $("cAcepto").focus({ preventScroll: true });
+  }
 }
 $("cPorCodigo").onclick = () => entrarConCodigo($("cPorCodigo"));
 $("formCuenta").addEventListener("submit", async (e) => {
@@ -930,7 +940,10 @@ $("formCuenta").addEventListener("submit", async (e) => {
   if (!correo) return;
   await intentar("cError", () => nube.auth.signInWithPassword({ email: correo, password: $("cClave").value }), boton);
 });
-$("cAcepto").onchange = () => { $("cCrear").disabled = !$("cAcepto").checked; };
+$("cAcepto").onchange = () => {
+  $("cCrear").disabled = !$("cAcepto").checked;
+  if ($("cAcepto").checked && codigoPendiente) entrarConCodigo(codigoPendiente);
+};
 $("cCrear").onclick = async () => {
   const boton = $("cCrear");
   if (!$("cAcepto").checked) return;
