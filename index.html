@@ -155,6 +155,24 @@
   .pestanas button[aria-selected="true"] { background: var(--texto); border-color: var(--texto); color: #fff; }
   .producto.elegido { border-color: var(--verde); box-shadow: 0 0 0 1px var(--verde); }
   .producto .desde { color: var(--texto); font-size: .9rem; font-weight: 600; margin-top: 2px; }
+  header .ancho { position: relative; }
+  .btnCuenta {
+    position: absolute; top: 0; right: 16px; font: inherit; font-size: .9rem; font-weight: 700; cursor: pointer;
+    background: var(--tarjeta); color: var(--texto); border: 1px solid var(--borde); border-radius: 999px; padding: 7px 14px;
+  }
+  .enlace {
+    font: inherit; font-weight: 600; cursor: pointer; background: none; border: 0; padding: 6px 0;
+    color: var(--texto); text-decoration: underline; text-align: left;
+  }
+  .secundario {
+    font: inherit; font-weight: 700; cursor: pointer; background: var(--tarjeta); color: var(--verde);
+    border: 1px solid var(--verde); border-radius: 12px; padding: 12px;
+  }
+  .ok { color: #17663a; font-size: .92rem; margin: 0; }
+  .pedidoViejo { display: grid; gap: 4px; }
+  .pedidoViejo .cuando { font-weight: 700; display: flex; justify-content: space-between; gap: 12px; }
+  .pedidoViejo .que { color: var(--suave); font-size: .9rem; }
+  .pedidoViejo .secundario { justify-self: start; padding: 8px 14px; margin-top: 4px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -162,6 +180,7 @@
 
 <header>
   <div class="ancho">
+    <button type="button" class="btnCuenta" id="btnCuenta" hidden>Entrar</button>
     <h1><img id="logo" src="logo.webp" width="2000" height="667" alt=""></h1>
     <p id="bajada"></p>
     <div class="pasos" id="pasos"><span data-paso="1">1. Elige</span><span data-paso="2">2. Tus datos</span><span data-paso="3">3. Envía por WhatsApp</span></div>
@@ -256,6 +275,7 @@
     </div>
     <p class="nota">El total final se confirma por WhatsApp antes de la entrega.</p>
     <p class="nota" id="horario"></p>
+    <p class="nota" id="notaCuenta" hidden></p>
 
     <div id="vistaMensaje" hidden>
       <h2>Así llegaría tu pedido</h2>
@@ -293,12 +313,69 @@
       <pre class="mensaje" id="sMensaje"></pre>
     </div>
   </section>
+
+  <section id="vistaCuenta" class="paso" hidden>
+    <div id="cuentaFuera">
+      <h2>Tu cuenta</h2>
+      <p class="nota" style="margin:0 0 4px">Con una cuenta guardas tus pedidos y puedes repetirlos con un toque.</p>
+      <form id="formCuenta" novalidate>
+        <label>Correo
+          <input id="cCorreo" type="email" autocomplete="email" inputmode="email" required>
+        </label>
+        <label>Contraseña
+          <input id="cClave" type="password" autocomplete="current-password" minlength="8">
+        </label>
+        <p class="error" id="cError" role="alert"></p>
+        <button class="enviar" type="submit">Entrar</button>
+        <button class="secundario" type="button" id="cCrear">Crear cuenta</button>
+        <button class="enlace" type="button" id="cPorCodigo">Entrar sin contraseña: recibir un código en mi correo</button>
+        <button class="enlace" type="button" id="cOlvide">Olvidé mi contraseña</button>
+        <p class="nota">Al crear una cuenta aceptas la <a href="privacidad.html">política de privacidad</a>.</p>
+      </form>
+    </div>
+
+    <div id="cuentaCodigo" hidden>
+      <h2>Revisa tu correo</h2>
+      <p class="nota" id="codigoAviso" style="margin:0"></p>
+      <form id="formCodigo" novalidate>
+        <label>Código
+          <input id="cCodigo" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required>
+        </label>
+        <label id="cNuevaCaja" hidden>Nueva contraseña
+          <input id="cNueva" type="password" autocomplete="new-password" minlength="8">
+        </label>
+        <p class="error" id="codigoError" role="alert"></p>
+        <button class="enviar" type="submit">Confirmar</button>
+        <button class="enlace" type="button" id="cCancelar">← Usar otro correo</button>
+      </form>
+    </div>
+
+    <div id="cuentaDentro" hidden>
+      <h2>Mis pedidos</h2>
+      <p class="nota" id="cQuien" style="margin:0 0 10px"></p>
+      <div class="lista" id="historial"></div>
+      <form id="formClave" novalidate>
+        <label>Cambiar contraseña
+          <input id="cCambio" type="password" autocomplete="new-password" minlength="8" placeholder="Nueva contraseña (mínimo 8 caracteres)">
+        </label>
+        <p class="error" id="claveError" role="alert"></p>
+        <p class="ok" id="claveOk" role="status"></p>
+        <button class="secundario" type="submit">Guardar contraseña</button>
+        <button class="enlace" type="button" id="cSalir">Cerrar sesión</button>
+      </form>
+    </div>
+    <button type="button" class="volver" id="cVolver" style="display:block;margin:8px auto 0">← Volver a la tienda</button>
+  </section>
 </main>
 
 <script>
 // El catálogo (datos del negocio, productos y servicios) vive en catalogo.json
 // y se edita desde la pantalla de administración.
 let CONFIG = {}, PRODUCTOS = [], SERVICIOS = [];
+
+// Cuentas de clientes (Supabase). Con estos dos datos vacíos la página funciona sin cuentas.
+// La clave es la "publishable key": es pública por diseño; lo que protege los datos son las reglas de la tabla.
+const CUENTAS = { url: "https://rurxnvvfnbqrsvgapndr.supabase.co", clave: "sb_publishable_nsf17n-bNwxQ_FxwTBsKqw_j1m_0rOg" };
 
 const $ = (id) => document.getElementById(id);
 const pesos = (n) => "$" + n.toLocaleString("es-CL");
@@ -503,7 +580,7 @@ function mostrarPaso(n, mover) {
   $("pasos").querySelectorAll("span").forEach((s) => {
     if (Number(s.dataset.paso) === n) s.setAttribute("aria-current", "step"); else s.removeAttribute("aria-current");
   });
-  if (n === 3) pintarConfirmacion();
+  if (n === 3) { pintarConfirmacion(); pintarNotaCuenta(); }
   if (mover) (n === 1 ? document.body : $("paso" + n)).scrollIntoView();
 }
 // Cada paso queda en el historial: el botón "atrás" del celular vuelve al paso anterior.
@@ -559,12 +636,17 @@ $("enviar").onclick = () => {
   const mensaje = armarMensaje();
   const numero = CONFIG.whatsapp.replace(/\D/g, "");
   if (!numero) {
+    guardarPedido();
     $("mensaje").textContent = mensaje;
     $("vistaMensaje").hidden = false;
     $("vistaMensaje").scrollIntoView({ behavior: "smooth" });
     return;
   }
-  window.location.href = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensaje);
+  $("enviar").disabled = true;
+  guardarPedido().finally(() => {
+    $("enviar").disabled = false;
+    window.location.href = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensaje);
+  });
 };
 
 // --- servicios ---
@@ -572,6 +654,8 @@ function mostrarVista(cual) {
   vista = cual;
   $("vistaProductos").hidden = cual !== "productos";
   $("vistaServicios").hidden = cual !== "servicios";
+  $("vistaCuenta").hidden = cual !== "cuenta";
+  if (cual === "cuenta") $("pestanas").hidden = true; else mostrarPaso(paso, false);
   $("tabProductos").setAttribute("aria-selected", String(cual === "productos"));
   $("tabServicios").setAttribute("aria-selected", String(cual === "servicios"));
   $("pasos").hidden = cual !== "productos";
@@ -621,6 +705,197 @@ $("formServicio").addEventListener("submit", (e) => {
   window.location.href = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensaje);
 });
 
+// --- cuentas e historial (solo si CUENTAS está configurado) ---
+let nube = null;        // cliente de Supabase
+let sesion = null;      // sesión del cliente, si entró
+let esperaCodigo = null; // { correo, tipo: "email" | "recovery" }
+
+const ERRORES_CUENTA = [
+  [/invalid login credentials/i, "Correo o contraseña incorrectos."],
+  [/email not confirmed/i, "Falta confirmar tu correo. Pide un código para entrar."],
+  [/already registered/i, "Ese correo ya tiene cuenta. Entra o recupera tu contraseña."],
+  [/expired|invalid.*(token|otp)|otp.*invalid/i, "El código no es válido o ya venció. Pide uno nuevo."],
+  [/rate limit|security purposes|too many/i, "Demasiados intentos. Espera un minuto y prueba de nuevo."],
+  [/password should be|weak/i, "La contraseña debe tener al menos 8 caracteres."],
+  [/signups? not allowed|not authorized/i, "Por ahora no se pueden crear cuentas con ese correo."],
+  [/invalid.*email|email.*invalid/i, "Revisa el correo: no parece válido."],
+  [/fetch|network/i, "No hay conexión. Intenta de nuevo."],
+];
+function errorCuenta(e) {
+  const texto = (e && e.message) || "";
+  const par = ERRORES_CUENTA.find(([r]) => r.test(texto));
+  return par ? par[1] : "No se pudo completar. Intenta de nuevo.";
+}
+
+function cargarLibreria() {
+  return new Promise((ok, mal) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    s.onload = ok; s.onerror = mal;
+    document.head.append(s);
+  });
+}
+
+async function iniciarCuentas() {
+  if (!CUENTAS.url || !CUENTAS.clave) return;
+  try {
+    await cargarLibreria();
+    nube = window.supabase.createClient(CUENTAS.url, CUENTAS.clave);
+  } catch (e) { return; }   // sin cuentas: la tienda funciona igual
+  $("btnCuenta").hidden = false;
+  nube.auth.onAuthStateChange((_evento, s) => { sesion = s; pintarCuenta(); });
+  const { data } = await nube.auth.getSession();
+  sesion = data.session;
+  pintarCuenta();
+}
+
+function pintarCuenta() {
+  $("btnCuenta").textContent = sesion ? "Mi cuenta" : "Entrar";
+  $("cuentaDentro").hidden = !sesion;
+  $("cuentaCodigo").hidden = Boolean(sesion) || !esperaCodigo;
+  $("cuentaFuera").hidden = Boolean(sesion) || Boolean(esperaCodigo);
+  if (sesion) {
+    $("cQuien").textContent = "Entraste como " + sesion.user.email + ".";
+    if (vista === "cuenta") setTimeout(pintarHistorial, 0);   // fuera del aviso de sesión, para no bloquearlo
+  }
+  pintarNotaCuenta();
+}
+function pintarNotaCuenta() {
+  $("notaCuenta").hidden = !nube;
+  $("notaCuenta").textContent = sesion
+    ? "Este pedido quedará guardado en tu historial."
+    : "Entra a tu cuenta (arriba) si quieres guardar este pedido en tu historial.";
+}
+
+function pedirCodigo(correo, tipo, aviso) {
+  esperaCodigo = { correo, tipo };
+  $("codigoAviso").textContent = aviso + " " + correo + ". Si no llega, revisa la carpeta de spam.";
+  $("cNuevaCaja").hidden = tipo !== "recovery";
+  $("cCodigo").value = ""; $("cNueva").value = ""; $("codigoError").textContent = "";
+  pintarCuenta();
+  $("cCodigo").focus();
+}
+function correoEscrito() {
+  const correo = $("cCorreo").value.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) { $("cError").textContent = "Escribe tu correo."; return ""; }
+  return correo;
+}
+// Ejecuta una acción de cuenta mostrando el error (si lo hay) en el elemento indicado.
+async function intentar(idError, accion) {
+  $(idError).textContent = "";
+  try {
+    const { data, error } = await accion();
+    if (error) throw error;
+    return data || {};
+  } catch (e) {
+    $(idError).textContent = errorCuenta(e);
+    return null;
+  }
+}
+
+$("formCuenta").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const correo = correoEscrito();
+  if (!correo) return;
+  if (!$("cClave").value) { $("cError").textContent = "Escribe tu contraseña."; return; }
+  await intentar("cError", () => nube.auth.signInWithPassword({ email: correo, password: $("cClave").value }));
+});
+$("cCrear").onclick = async () => {
+  const correo = correoEscrito();
+  if (!correo) return;
+  if ($("cClave").value.length < 8) { $("cError").textContent = "Elige una contraseña de al menos 8 caracteres."; return; }
+  const d = await intentar("cError", () => nube.auth.signUp({ email: correo, password: $("cClave").value }));
+  if (!d) return;
+  if (d.user && d.user.identities && d.user.identities.length === 0) {
+    $("cError").textContent = "Ese correo ya tiene cuenta. Entra o recupera tu contraseña.";
+    return;
+  }
+  if (!d.session) pedirCodigo(correo, "email", "Para confirmar tu cuenta, escribe el código que enviamos a");
+};
+$("cPorCodigo").onclick = async () => {
+  const correo = correoEscrito();
+  if (!correo) return;
+  if (await intentar("cError", () => nube.auth.signInWithOtp({ email: correo })))
+    pedirCodigo(correo, "email", "Escribe el código que enviamos a");
+};
+$("cOlvide").onclick = async () => {
+  const correo = correoEscrito();
+  if (!correo) return;
+  if (await intentar("cError", () => nube.auth.resetPasswordForEmail(correo)))
+    pedirCodigo(correo, "recovery", "Si ese correo tiene cuenta, enviamos un código a");
+};
+$("formCodigo").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const codigo = $("cCodigo").value.replace(/\D/g, "");
+  const cambiaClave = esperaCodigo.tipo === "recovery";
+  if (!codigo) { $("codigoError").textContent = "Escribe el código."; return; }
+  if (cambiaClave && $("cNueva").value.length < 8) { $("codigoError").textContent = "Elige una contraseña de al menos 8 caracteres."; return; }
+  const nueva = $("cNueva").value;
+  const d = await intentar("codigoError", () => nube.auth.verifyOtp({ email: esperaCodigo.correo, token: codigo, type: esperaCodigo.tipo }));
+  if (!d) return;
+  esperaCodigo = null;
+  if (cambiaClave) await intentar("claveError", () => nube.auth.updateUser({ password: nueva }));
+  pintarCuenta();
+});
+$("cCancelar").onclick = () => { esperaCodigo = null; pintarCuenta(); };
+$("formClave").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("claveOk").textContent = "";
+  if ($("cCambio").value.length < 8) { $("claveError").textContent = "Elige una contraseña de al menos 8 caracteres."; return; }
+  if (await intentar("claveError", () => nube.auth.updateUser({ password: $("cCambio").value }))) {
+    $("cCambio").value = "";
+    $("claveOk").textContent = "Contraseña guardada.";
+  }
+});
+$("cSalir").onclick = () => nube.auth.signOut();
+$("btnCuenta").onclick = () => { mostrarVista("cuenta"); pintarCuenta(); $("vistaCuenta").scrollIntoView(); };
+$("cVolver").onclick = () => mostrarVista("productos");
+
+// Guarda el pedido en el historial del cliente. Nunca impide enviar el pedido.
+async function guardarPedido() {
+  if (!nube || !sesion) return;
+  const t = totales();
+  const fila = {
+    nombre: $("nombre").value.trim().slice(0, 80), edificio: $("edificio").value.slice(0, 80),
+    depto: $("depto").value.trim().slice(0, 20), pago: $("pago").value, otros: $("otros").value.trim().slice(0, 500),
+    items: t.items.map((p) => ({ id: p.id, nombre: titulo(p), formato: p.formato, precio: p.precio, n: p.n })),
+    subtotal: t.subtotal, despacho: CONFIG.tarifa, total: t.total,
+  };
+  try {
+    await Promise.race([nube.from("pedidos").insert(fila), new Promise((r) => setTimeout(r, 4000))]);
+  } catch (e) { /* el pedido se envía igual */ }
+}
+
+async function pintarHistorial() {
+  $("historial").replaceChildren(crear("p", "vacio", "Cargando…"));
+  const { data, error } = await nube.from("pedidos").select("*").order("creado", { ascending: false }).limit(30);
+  if (error) { $("historial").replaceChildren(crear("p", "vacio", "No se pudo cargar tu historial.")); return; }
+  if (!data.length) { $("historial").replaceChildren(crear("p", "vacio", "Aún no tienes pedidos guardados.")); return; }
+  $("historial").replaceChildren(...data.map((ped) => {
+    const caja = crear("div", "caja pedidoViejo");
+    const cuando = crear("div", "cuando");
+    const fecha = new Date(ped.creado).toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" });
+    cuando.append(crear("span", "", fecha), crear("span", "", pesos(Number(ped.total) || 0)));
+    const items = Array.isArray(ped.items) ? ped.items : [];
+    const que = items.map((i) => i.n + " × " + i.nombre).join(", ") + (ped.otros ? (items.length ? ", " : "") + ped.otros : "");
+    caja.append(cuando, crear("div", "que", que));
+    const disponibles = items.filter((i) => PRODUCTOS.some((p) => p.id === i.id));
+    if (disponibles.length) {
+      const b = crear("button", "secundario", "Repetir pedido");
+      b.type = "button";
+      b.onclick = () => {
+        carrito = {};
+        disponibles.forEach((i) => { carrito[i.id] = Math.max(1, Math.min(99, Number(i.n) || 1)); });
+        guardar(); pintarLista(); pintarResumen();
+        paso = 1; mostrarVista("productos");
+        $("pedido").scrollIntoView();
+      };
+      caja.append(b);
+    }
+    return caja;
+  }));
+}
+
 // --- inicio ---
 const GEMELOS = [["nombre", "sNombre"], ["depto", "sDepto"], ["edificio", "sEdificio"]];
 
@@ -668,6 +943,7 @@ async function iniciar() {
   pintarResumen();
   const m = /^#paso([123])$/.exec(location.hash);
   mostrarPaso(m ? Number(m[1]) : 1, false);
+  iniciarCuentas();
 }
 iniciar();
 </script>
