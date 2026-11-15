@@ -39,9 +39,12 @@
   header h1 { margin: 0 0 6px; line-height: 0; }
   header h1 img { display: block; width: 100%; max-width: 260px; height: auto; margin-left: -6px; }
   header p { margin: 0; font-size: 1rem; font-weight: 600; }
-  .pasos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; font-size: .85rem; }
-  .pasos span { background: var(--verde-claro); color: var(--suave); padding: 4px 10px; border-radius: 999px; font-weight: 600; }
-  .pasos span[aria-current="step"] { background: var(--texto); color: #fff; }
+  .pasos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; max-width: 460px; }
+  .pasos button {
+    font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+    background: var(--verde-claro); color: var(--suave); border: 0; border-radius: 999px; padding: 8px 4px;
+  }
+  .pasos button[aria-current="step"] { background: var(--texto); color: #fff; }
 
   .aviso {
     background: var(--alerta-fondo); color: var(--alerta);
@@ -204,7 +207,7 @@
     <button type="button" class="btnCuenta" id="btnCuenta" hidden>Entrar</button>
     <h1><img id="logo" src="logo.webp" width="2000" height="667" alt=""></h1>
     <p id="bajada"></p>
-    <div class="pasos" id="pasos"><span data-paso="1">1. Elige</span><span data-paso="2">2. Tus datos</span><span data-paso="3">3. Envía por WhatsApp</span></div>
+    <nav class="pasos" id="pasos" aria-label="Pasos del pedido"><button type="button" data-paso="1">1. Elige</button><button type="button" data-paso="2">2. Tus datos</button><button type="button" data-paso="3">3. Enviar</button></nav>
   </div>
 </header>
 
@@ -659,7 +662,7 @@ function mostrarPaso(n, mover) {
   paso = n;
   [1, 2, 3].forEach((i) => { $("paso" + i).hidden = i !== n; });
   $("pestanas").hidden = n !== 1;
-  $("pasos").querySelectorAll("span").forEach((s) => {
+  $("pasos").querySelectorAll("button").forEach((s) => {
     if (Number(s.dataset.paso) === n) s.setAttribute("aria-current", "step"); else s.removeAttribute("aria-current");
   });
   if (n === 2) pintarPaso2();
@@ -673,6 +676,20 @@ function irPaso(n) {
 window.addEventListener("hashchange", () => {
   const m = /^#paso([123])$/.exec(location.hash);
   mostrarPaso(m ? Number(m[1]) : 1, true);
+});
+
+// Los pasos de arriba son botones: llevan directo a ese paso si lo anterior está completo.
+$("pasos").querySelectorAll("button").forEach((b) => {
+  b.onclick = () => {
+    const n = Number(b.dataset.paso);
+    const e1 = n >= 2 ? errorPaso1() : "";
+    const e2 = n === 3 && !e1 ? errorPaso2() : "";
+    if (n === 2 && !e1) editando = true;
+    irPaso(e1 ? 1 : e2 ? 2 : n);
+    $("error1").textContent = e1;
+    $("error").textContent = e2;
+    if (e1) $("pedido").classList.add("abierto"), pintarResumen();
+  };
 });
 
 $("irDatos").onclick = () => {
