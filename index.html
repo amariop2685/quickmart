@@ -595,10 +595,11 @@ const importe = (p, n) => Math.round(p.precio * cantidadDe(p, n));
 function textoCantidad(p, n) {
   if (!porMedida(p)) return String(n);
   const c = cantidadDe(p, n);
-  if (c < 1) return Math.round(c * 1000) + (p.unidad === "kg" ? " g" : " ml");
-  return c.toLocaleString("es-CL") + " " + p.unidad;
+  if (p.unidad === "kg") return Math.round(c * 1000).toLocaleString("es-CL") + " g";   // el peso siempre en gramos
+  if (c < 1) return Math.round(c * 1000) + " ml";
+  return c.toLocaleString("es-CL") + " L";
 }
-// "2 × Leche (caja 1 L)" o "1,5 kg de Tomate"
+// "2 × Leche (caja 1 L)" o "1.500 g de Tomate"
 function textoLinea(p, n) {
   if (porMedida(p)) return textoCantidad(p, n) + " de " + titulo(p);
   return n + " × " + titulo(p) + (p.formato ? " (" + p.formato + ")" : "");
