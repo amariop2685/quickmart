@@ -68,7 +68,7 @@
   .filtros button[aria-pressed="true"] { background: var(--verde); border-color: var(--verde); color: #fff; }
 
   h2 { font-size: 1.1rem; margin: 22px 0 10px; }
-  .lista { display: grid; gap: 8px; }
+  .lista { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .producto {
     background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px;
     padding: 10px 12px; display: flex; align-items: center; gap: 10px;
@@ -85,8 +85,23 @@
   .producto .datos { flex: 1; min-width: 0; }
   .producto .nombre { font-weight: 600; }
   .producto .formato { color: var(--suave); font-size: .88rem; }
-  .producto .precio { font-weight: 700; white-space: nowrap; margin-top: 2px; }
+  .producto .precio { font-weight: 700; margin-top: 2px; }
   .producto .nombre { line-height: 1.25; }
+  .producto { position: relative; }
+  .producto.conEtiqueta { margin-top: 10px; }
+  .etiqueta {
+    position: absolute; top: -10px; z-index: 1; color: #fff; font-size: .72rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .04em; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(0,0,0,.18);
+  }
+  .etiqueta.izq { left: 10px; } .etiqueta.der { right: 10px; }
+  .etiqueta.rojo { background: #d90b16; } .etiqueta.azul { background: #0b1a4a; }
+  .etiqueta.verde { background: #17803d; } .etiqueta.naranja { background: #c2570a; }
+  .producto .antes { color: var(--suave); font-weight: 400; font-size: .88rem; text-decoration: line-through; margin-left: 6px; white-space: nowrap; }
+  .producto .ahorra {
+    display: inline-block; margin-top: 3px; background: #fde8e9; color: #b00812;
+    font-size: .78rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;
+  }
   .cantidad { display: flex; align-items: center; gap: 6px; }
   .cantidad button, .agregar {
     font: inherit; cursor: pointer; border-radius: 10px; border: 1px solid var(--verde);
@@ -635,9 +650,22 @@ function pintarLista() {
     if (p.marca) datos.append(crear("div", "marca", p.marca));
     const formato = porMedida(p)
       ? [p.formato, "Pide de a " + textoCantidad(p, 1)].filter(Boolean).join(" · ") : p.formato;
-    datos.append(crear("div", "nombre", p.nombre), crear("div", "formato", formato),
-                 crear("div", "precio", pesos(p.precio) + (porMedida(p) ? (p.unidad === "kg" ? " el kilo" : " el litro") : "")));
+    const medida = porMedida(p) ? (p.unidad === "kg" ? " el kilo" : " el litro") : "";
+    const precio = crear("div", "precio", pesos(p.precio) + medida);
+    datos.append(crear("div", "nombre", p.nombre), crear("div", "formato", formato), precio);
+    const antes = Number(p.antes) || 0;
+    if (antes > p.precio) {   // rebaja: precio anterior tachado y cuánto se ahorra
+      precio.append(crear("span", "antes", pesos(antes)));
+      datos.append(crear("div", "ahorra", "Ahorra " + pesos(antes - p.precio) + (porMedida(p) ? " por" + medida.replace(" el", "") : "")));
+    }
     fila.append(foto(p), datos, controlCantidad(p));
+    const etiquetas = (Array.isArray(p.etiquetas) ? p.etiquetas : []).filter((e) => e && e.texto).slice(0, 2);
+    if (etiquetas.length) {
+      fila.classList.add("conEtiqueta");
+      etiquetas.forEach((e) => fila.append(crear("span",
+        "etiqueta " + (e.lado === "der" ? "der" : "izq") + " " + (["rojo", "azul", "verde", "naranja"].includes(e.color) ? e.color : "rojo"),
+        String(e.texto).slice(0, 18))));
+    }
     return fila;
   }));
   $("sinResultados").hidden = visibles.length > 0;

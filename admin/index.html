@@ -192,6 +192,17 @@
         <select id="pPaso"></select>
       </label>
     </div>
+    <label>Precio normal, antes de la rebaja <small>Opcional. Si es mayor que el precio, la tienda muestra el precio anterior tachado y la etiqueta “Ahorra”.</small>
+      <input id="pAntes" type="number" min="0" step="10">
+    </label>
+    <div class="dos">
+      <label>Etiqueta 1 <small>Arriba a la izquierda. Ej.: Oferta</small><input id="pEt1" maxlength="18"></label>
+      <label>Color <select id="pEt1Color"><option value="rojo">Rojo</option><option value="azul">Azul marino</option><option value="verde">Verde</option><option value="naranja">Naranja</option></select></label>
+    </div>
+    <div class="dos">
+      <label>Etiqueta 2 <small>Arriba a la derecha. Ej.: 2x1</small><input id="pEt2" maxlength="18"></label>
+      <label>Color <select id="pEt2Color"><option value="rojo">Rojo</option><option value="azul">Azul marino</option><option value="verde">Verde</option><option value="naranja">Naranja</option></select></label>
+    </div>
     <label>Categoría <input id="pCat" list="categorias"><datalist id="categorias"></datalist></label>
     <label>Imagen <small>Opcional. Se achica sola para que cargue rápido.</small>
       <div class="fotoFila">
@@ -433,6 +444,13 @@ function abrirProducto(p) {
   $("pFormato").value = p ? p.formato || "" : "";
   $("pPrecio").value = p ? p.precio : "";
   $("pCat").value = p ? p.cat || "" : "";
+  $("pAntes").value = p && p.antes ? p.antes : "";
+  const ets = (p && Array.isArray(p.etiquetas) ? p.etiquetas : []);
+  [1, 2].forEach((i) => {
+    const e = ets.find((x) => x.lado === (i === 1 ? "izq" : "der")) || {};
+    $("pEt" + i).value = e.texto || "";
+    $("pEt" + i + "Color").value = ["rojo", "azul", "verde", "naranja"].includes(e.color) ? e.color : (i === 1 ? "rojo" : "azul");
+  });
   $("pVenta").value = p && (p.unidad === "kg" || p.unidad === "L") ? p.unidad : "";
   pintarVenta(p ? Number(p.paso) : 0);
   $("pFoto").value = "";
@@ -496,6 +514,8 @@ $("formProducto").addEventListener("submit", async (e) => {
   let error = "";
   if (!nombre) error = "Escribe el nombre del producto.";
   else if ($("pPrecio").value === "" || !Number.isFinite(precio) || precio < 0) error = "Escribe un precio válido.";
+  const antes = Math.round(Number($("pAntes").value) || 0);
+  if (!error && antes && antes <= precio) error = "El precio normal debe ser mayor que el precio de venta. Déjalo vacío si no hay rebaja.";
   $("pError").textContent = error;
   if (error) return;
 
@@ -509,6 +529,10 @@ $("formProducto").addEventListener("submit", async (e) => {
   p.formato = $("pFormato").value.trim();
   p.precio = Math.round(precio);
   p.cat = $("pCat").value.trim() || "Otros";
+  if (antes > precio) p.antes = antes; else delete p.antes;
+  const etiquetas = [1, 2].map((i) => ({ texto: $("pEt" + i).value.trim().slice(0, 18), color: $("pEt" + i + "Color").value, lado: i === 1 ? "izq" : "der" }))
+    .filter((e) => e.texto);
+  if (etiquetas.length) p.etiquetas = etiquetas; else delete p.etiquetas;
   if ($("pVenta").value) { p.unidad = $("pVenta").value; p.paso = Number($("pPaso").value) || 1; }
   else { delete p.unidad; delete p.paso; }
   const marca = $("pMarca").value.trim();
