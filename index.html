@@ -205,6 +205,13 @@
     flex: none; font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer; min-width: 76px;
     background: var(--tarjeta); color: var(--texto); border: 1px solid var(--borde); border-radius: 8px; padding: 8px 10px;
   }
+  details.ajuste { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; margin-top: 10px; }
+  details.ajuste > summary { cursor: pointer; font-weight: 700; padding: 14px; list-style: none; display: flex; justify-content: space-between; }
+  details.ajuste > summary::-webkit-details-marker { display: none; }
+  details.ajuste > summary::after { content: "▾"; color: var(--suave); }
+  details.ajuste[open] > summary::after { content: "▴"; }
+  details.ajuste > .dentro { padding: 0 14px 14px; }
+  details.ajuste form { margin-top: 0; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -452,18 +459,41 @@
     </div>
 
     <div id="cuentaDentro" hidden>
-      <h2>Mis pedidos</h2>
-      <p class="nota" id="cQuien" style="margin:0 0 10px"></p>
-      <div class="lista" id="historial"></div>
-      <form id="formClave" novalidate>
-        <label>Cambiar contraseña
-          <input id="cCambio" type="password" autocomplete="new-password" minlength="8" placeholder="Nueva contraseña (mínimo 8 caracteres)">
-        </label>
-        <p class="error" id="claveError" role="alert"></p>
-        <p class="ok" id="claveOk" role="status"></p>
-        <button class="secundario" type="submit">Guardar contraseña</button>
-        <button class="enlace" type="button" id="cSalir">Cerrar sesión</button>
-      </form>
+      <h2>Ajustes de tu cuenta</h2>
+      <p class="nota" id="cQuien" style="margin:0"></p>
+
+      <details class="ajuste" id="ajPedidos" open>
+        <summary>Mis pedidos anteriores</summary>
+        <div class="dentro"><div class="lista" id="historial"></div></div>
+      </details>
+
+      <details class="ajuste" id="ajPerfil">
+        <summary>Editar mi perfil</summary>
+        <div class="dentro">
+          <form id="formPerfil" novalidate>
+            <div id="perfilAqui"></div>
+            <p class="error" id="perfilError" role="alert"></p>
+            <p class="ok" id="perfilOk" role="status"></p>
+            <button class="secundario" type="submit" id="perfilGuardar">Guardar mis datos</button>
+          </form>
+        </div>
+      </details>
+
+      <details class="ajuste" id="ajClave">
+        <summary>Cambiar contraseña</summary>
+        <div class="dentro">
+          <form id="formClave" novalidate>
+            <label>Nueva contraseña
+              <input id="cCambio" type="password" autocomplete="new-password" minlength="8" placeholder="Mínimo 8 caracteres">
+            </label>
+            <p class="error" id="claveError" role="alert"></p>
+            <p class="ok" id="claveOk" role="status"></p>
+            <button class="secundario" type="submit" id="claveGuardar">Guardar contraseña</button>
+          </form>
+        </div>
+      </details>
+
+      <button class="secundario" type="button" id="cSalir" style="width:100%;margin-top:14px">Cerrar sesión</button>
     </div>
     <button type="button" class="volver" id="cVolver" style="display:block;margin:8px auto 0">← Volver a la tienda</button>
   </section>
@@ -1016,6 +1046,7 @@ function aplicarPerfil() {
   editando = false;
   quiereCuenta = false;
   guardar();
+  if (vista === "cuenta") { mostrarVista("productos"); document.body.scrollIntoView(); }   // al entrar, de vuelta a la tienda
 }
 function guardarPerfil() {
   if (!nube || !sesion) return;
@@ -1027,11 +1058,35 @@ function guardarPerfil() {
     telefono: texto("telefono", 20), nacimiento: $("nacimiento").value,
   };
   if (PERFIL.every((k) => (m[k] || "") === d[k])) return;
-  nube.auth.updateUser({ data: d }).catch(() => {});   // si falla, el pedido sigue igual
+  return nube.auth.updateUser({ data: d }).catch((e) => ({ error: e }));   // si falla, el pedido sigue igual
 }
 
 // Paso 2: primero el formulario sin cuenta, con la cuenta como opción; con datos guardados solo pide confirmarlos.
+// Los campos de datos personales son unos solos: se muestran en el paso 2 o en "Editar mi perfil".
+function ubicarPerfil(enAjustes) {
+  if (enAjustes) {
+    $("perfilAqui").append($("camposDatos"));
+    $("camposDatos").hidden = false;
+    $("camposCuenta").hidden = false; $("camposNombre").hidden = false;
+    $("etiquetaNombre").textContent = "Nombre";
+  } else if ($("camposDatos").parentElement !== $("form")) {
+    $("datosGuardados").after($("camposDatos"));
+  }
+}
+$("formPerfil").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("perfilOk").textContent = "";
+  const error = errorPaso2();
+  $("perfilError").textContent = error;
+  if (error) return;
+  $("rut").value = formatoRut($("rut").value);
+  guardar();
+  const r = await intentar("perfilError", async () => (await guardarPerfil()) || { data: {} }, $("perfilGuardar"));
+  if (r) $("perfilOk").textContent = "Datos guardados.";
+});
+
 function pintarPaso2() {
+  ubicarPerfil(false);
   const pideCuenta = Boolean(nube) && !sesion && quiereCuenta;
   const confirma = Boolean(sesion) && !editando && !errorPaso2();
   if (pideCuenta) ubicarCuenta(true);
@@ -1059,13 +1114,14 @@ $("rut").addEventListener("blur", () => { if (rutValido($("rut").value)) $("rut"
 
 function pintarCuenta() {
   aplicarPerfil();
-  $("btnCuenta").textContent = sesion ? "Mi cuenta" : "Entrar";
+  $("btnCuenta").textContent = sesion ? "⚙ Ajustes" : "Entrar";
+  $("btnCuenta").setAttribute("aria-label", sesion ? "Ajustes de tu cuenta" : "Entrar a tu cuenta");
   $("cuentaDentro").hidden = !sesion;
   $("cuentaCodigo").hidden = Boolean(sesion) || !esperaCodigo;
   $("cuentaFuera").hidden = Boolean(sesion) || Boolean(esperaCodigo);
   if (sesion) {
     $("cQuien").textContent = "Entraste como " + sesion.user.email + ".";
-    if (vista === "cuenta") setTimeout(pintarHistorial, 0);   // fuera del aviso de sesión, para no bloquearlo
+    if (vista === "cuenta") { ubicarPerfil(true); setTimeout(pintarHistorial, 0); }   // fuera del aviso de sesión, para no bloquearlo
   }
   if (vista === "productos" && paso === 2) pintarPaso2();
   pintarNotaCuenta();
@@ -1191,12 +1247,12 @@ $("formClave").addEventListener("submit", async (e) => {
   e.preventDefault();
   $("claveOk").textContent = "";
   if ($("cCambio").value.length < 8) { $("claveError").textContent = "Elige una contraseña de al menos 8 caracteres."; return; }
-  if (await intentar("claveError", () => nube.auth.updateUser({ password: $("cCambio").value }))) {
+  if (await intentar("claveError", () => nube.auth.updateUser({ password: $("cCambio").value }), $("claveGuardar"))) {
     $("cCambio").value = "";
     $("claveOk").textContent = "Contraseña guardada.";
   }
 });
-$("cSalir").onclick = () => nube.auth.signOut();
+$("cSalir").onclick = async () => { await nube.auth.signOut(); mostrarVista("productos"); document.body.scrollIntoView(); };
 $("btnCuenta").onclick = () => { ubicarCuenta(false); mostrarVista("cuenta"); pintarCuenta(); $("vistaCuenta").scrollIntoView(); };
 $("cVolver").onclick = () => mostrarVista("productos");
 
