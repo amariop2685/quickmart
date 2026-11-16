@@ -284,9 +284,28 @@
         <button type="button" class="enlace" id="cambiarDatos">Cambiar estos datos</button>
       </div>
       <div id="camposDatos" style="display:grid;gap:12px">
-        <label>Tu nombre
+        <label><span id="etiquetaNombre">Tu nombre</span>
           <input id="nombre" autocomplete="given-name" required>
         </label>
+        <div id="camposNombre" style="display:grid;gap:12px" hidden>
+          <label>Segundo nombre (opcional)
+            <input id="segundo" autocomplete="additional-name">
+          </label>
+          <div class="dos">
+            <label>Apellido paterno
+              <input id="paterno" autocomplete="family-name">
+            </label>
+            <label>Apellido materno
+              <input id="materno" autocomplete="off">
+            </label>
+          </div>
+          <label>RUT
+            <input id="rut" inputmode="text" autocomplete="off" placeholder="12.345.678-5">
+          </label>
+          <label>Email
+            <input id="email" type="email" readonly style="background:var(--verde-claro)">
+          </label>
+        </div>
         <div class="dos">
           <label>Edificio
             <select id="edificio" required></select>
@@ -295,18 +314,13 @@
             <input id="depto" inputmode="text" required>
           </label>
         </div>
-        <div id="camposCuenta" style="display:grid;gap:12px" hidden>
+        <div id="camposCuenta" class="dos" hidden>
           <label>Teléfono
             <input id="telefono" type="tel" inputmode="tel" autocomplete="tel" placeholder="+56 9 1234 5678">
           </label>
-          <div class="dos">
-            <label>RUT (opcional)
-              <input id="rut" inputmode="text" autocomplete="off" placeholder="12.345.678-5">
-            </label>
-            <label>Nacimiento (opcional)
-              <input id="nacimiento" type="date" autocomplete="bday" min="1900-01-01">
-            </label>
-          </div>
+          <label>Nacimiento (opcional)
+            <input id="nacimiento" type="date" autocomplete="bday" min="1900-01-01">
+          </label>
         </div>
       </div>
       <label>Forma de pago
@@ -631,14 +645,24 @@ function errorPaso1() {
 }
 function errorPaso2() {
   if (!$("nombre").value.trim()) return "Escribe tu nombre.";
+  if (sesion) {   // datos de la cuenta
+    if (!$("paterno").value.trim()) return "Escribe tu apellido paterno.";
+    if (!$("materno").value.trim()) return "Escribe tu apellido materno.";
+    if (!$("rut").value.trim()) return "Escribe tu RUT.";
+    if (!rutValido($("rut").value)) return "Revisa el RUT: no es válido.";
+  }
   if (!$("edificio").value) return "Elige tu edificio.";
   if (!$("depto").value.trim()) return "Escribe tu número de depto.";
-  if (sesion) {   // datos de la cuenta
+  if (sesion) {
     if ($("telefono").value.replace(/\D/g, "").length < 8) return "Escribe tu teléfono.";
-    if ($("rut").value.trim() && !rutValido($("rut").value)) return "Revisa el RUT: no es válido.";
     if ($("nacimiento").value && ($("nacimiento").value > new Date().toISOString().slice(0, 10) || $("nacimiento").value < "1900-01-01")) return "Revisa la fecha de nacimiento.";
   }
   return "";
+}
+// Con cuenta el nombre va completo (nombres y apellidos); sin cuenta, lo que el cliente escribió.
+function nombreCompleto() {
+  const partes = sesion ? ["nombre", "segundo", "paterno", "materno"] : ["nombre"];
+  return partes.map((id) => $(id).value.trim()).filter(Boolean).join(" ");
 }
 // RUT chileno: valida el dígito verificador (módulo 11).
 function limpiarRut(t) { return String(t).replace(/[^0-9kK]/g, "").toUpperCase(); }
@@ -670,7 +694,7 @@ function pintarConfirmacion() {
   $("tarifa3").textContent = pesos(CONFIG.tarifa);
   $("total3").textContent = pesos(t.total);
   $("datosEntrega").replaceChildren(
-    dato("Entregar a", $("nombre").value.trim() + " — " + $("edificio").value + ", depto " + $("depto").value.trim()),
+    dato("Entregar a", nombreCompleto() + " — " + $("edificio").value + ", depto " + $("depto").value.trim()),
     dato("Forma de pago", $("pago").value + (conComprobante() ? " — comprobante adjunto ✓" : "")));
   $("error3").textContent = "";
   $("vistaMensaje").hidden = true;
@@ -724,6 +748,7 @@ $("form").addEventListener("submit", (e) => {
   $("error").textContent = error;
   if (error && subiendoComprobante) return;
   if (error) { editando = true; pintarPaso2(); return; }
+  if (sesion) $("rut").value = formatoRut($("rut").value);
   guardar();
   guardarPerfil();
   editando = false;
@@ -826,7 +851,7 @@ function armarMensaje() {
   const otros = $("otros").value.trim();
   const lineas = [
     "Pedido — " + $("edificio").value + ", depto " + $("depto").value.trim(),
-    "Nombre: " + $("nombre").value.trim(),
+    "Nombre: " + nombreCompleto(),
     "",
     ...t.items.map((p) => "• " + p.n + " × " + titulo(p) + " (" + p.formato + ") — " + pesos(p.precio * p.n)),
   ];
@@ -974,19 +999,19 @@ function ubicarCuenta(enPaso2) {
 }
 
 // Datos guardados en la cuenta: se cargan al entrar y se borran de la pantalla al salir.
-const PERFIL = ["nombre", "edificio", "depto", "telefono", "rut", "nacimiento"];
+const PERFIL = ["nombre", "segundo", "paterno", "materno", "rut", "edificio", "depto", "telefono", "nacimiento"];
+const SOLO_CUENTA = ["segundo", "paterno", "materno", "rut", "telefono", "nacimiento", "email"];
 function aplicarPerfil() {
   const id = sesion ? sesion.user.id : "";
   if (id === usuarioVisto) return;
   usuarioVisto = id;
-  if (!sesion) { $("telefono").value = ""; $("rut").value = ""; $("nacimiento").value = ""; return; }
+  if (!sesion) { SOLO_CUENTA.forEach((k) => { $(k).value = ""; }); return; }
   const m = sesion.user.user_metadata || {};
   if (m.nombre) $("nombre").value = m.nombre;
   if (m.depto) $("depto").value = m.depto;
   if (m.edificio && CONFIG.edificios.includes(m.edificio)) $("edificio").value = m.edificio;
-  $("telefono").value = m.telefono || "";
-  $("rut").value = m.rut || "";
-  $("nacimiento").value = m.nacimiento || "";
+  SOLO_CUENTA.forEach((k) => { $(k).value = m[k] || ""; });
+  $("email").value = sesion.user.email || "";
   GEMELOS.forEach(([a, b]) => { $(b).value = $(a).value; });
   editando = false;
   quiereCuenta = false;
@@ -995,9 +1020,11 @@ function aplicarPerfil() {
 function guardarPerfil() {
   if (!nube || !sesion) return;
   const m = sesion.user.user_metadata || {};
+  const texto = (id, largo) => $(id).value.trim().slice(0, largo);
   const d = {
-    nombre: $("nombre").value.trim().slice(0, 80), edificio: $("edificio").value.slice(0, 80), depto: $("depto").value.trim().slice(0, 20),
-    telefono: $("telefono").value.trim().slice(0, 20), rut: formatoRut($("rut").value), nacimiento: $("nacimiento").value,
+    nombre: texto("nombre", 40), segundo: texto("segundo", 40), paterno: texto("paterno", 40), materno: texto("materno", 40),
+    rut: formatoRut($("rut").value), edificio: $("edificio").value.slice(0, 80), depto: texto("depto", 20),
+    telefono: texto("telefono", 20), nacimiento: $("nacimiento").value,
   };
   if (PERFIL.every((k) => (m[k] || "") === d[k])) return;
   nube.auth.updateUser({ data: d }).catch(() => {});   // si falla, el pedido sigue igual
@@ -1012,11 +1039,15 @@ function pintarPaso2() {
   $("form").hidden = pideCuenta;
   $("ofertaCuenta").hidden = !nube || Boolean(sesion);
   $("camposCuenta").hidden = !sesion;
+  $("camposNombre").hidden = !sesion;
+  $("etiquetaNombre").textContent = sesion ? "Nombre" : "Tu nombre";
   $("datosGuardados").hidden = !confirma;
   $("camposDatos").hidden = confirma;
   if (confirma) {
     $("datosGuardadosTexto").replaceChildren(
-      dato("Entregar a", $("nombre").value.trim() + " — " + $("edificio").value + ", depto " + $("depto").value.trim()),
+      dato("Entregar a", nombreCompleto() + " — " + $("edificio").value + ", depto " + $("depto").value.trim()),
+      dato("RUT", $("rut").value.trim()),
+      dato("Email", $("email").value),
       dato("Teléfono", $("telefono").value.trim()));
   }
   $("irEnviar").textContent = confirma ? "Están bien: revisar y enviar →" : "Paso 3: revisar y enviar →";
@@ -1175,7 +1206,7 @@ async function guardarPedido() {
   guardarPerfil();
   const t = totales();
   const fila = {
-    nombre: $("nombre").value.trim().slice(0, 80), edificio: $("edificio").value.slice(0, 80),
+    nombre: nombreCompleto().slice(0, 80), edificio: $("edificio").value.slice(0, 80),
     depto: $("depto").value.trim().slice(0, 20), pago: $("pago").value, otros: $("otros").value.trim().slice(0, 500),
     items: t.items.map((p) => ({ id: p.id, nombre: titulo(p), formato: p.formato, precio: p.precio, n: p.n })),
     subtotal: t.subtotal, despacho: CONFIG.tarifa, total: t.total,
