@@ -23,7 +23,10 @@
   #estado { font-size: .9rem; font-weight: 600; color: var(--suave); min-width: 9em; text-align: right; }
   #estado.ok { color: var(--ok); } #estado.mal { color: var(--rojo); }
 
-  .pestanas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0; }
+  .pestanas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0; }
+  @media (max-width: 520px) { .pestanas { grid-template-columns: repeat(2, 1fr); } }
+  .item .banner { flex: none; width: 128px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--claro); }
+  .item .campos { flex: 1; min-width: 180px; display: grid; gap: 6px; }
   .pestanas button { font: inherit; font-weight: 700; cursor: pointer; padding: 11px 6px;
     background: var(--tarjeta); color: var(--texto); border: 1px solid var(--borde); border-radius: 12px; }
   .pestanas button[aria-selected="true"] { background: var(--texto); border-color: var(--texto); color: #fff; }
@@ -121,6 +124,7 @@
   <div class="pestanas" role="tablist">
     <button type="button" role="tab" data-vista="productos" aria-selected="true">Productos</button>
     <button type="button" role="tab" data-vista="servicios" aria-selected="false">Servicios</button>
+    <button type="button" role="tab" data-vista="banners" aria-selected="false">Banners</button>
     <button type="button" role="tab" data-vista="negocio" aria-selected="false">Datos del negocio</button>
   </div>
 
@@ -141,6 +145,16 @@
     <div class="lista" id="listaServicios"></div>
   </section>
 
+  <section id="v-banners" hidden>
+    <div class="barra">
+      <span style="flex:1" class="cuenta">Imágenes que aparecen al inicio del carrusel de ofertas. Usa fotos horizontales (por ejemplo 1200 × 750); se achican solas.</span>
+      <button class="principal" id="nuevoBanner" type="button">+ Agregar banner</button>
+      <input id="bArchivo" type="file" accept="image/*" hidden>
+    </div>
+    <p class="error" id="bError" role="alert"></p>
+    <div class="lista" id="listaBanners"></div>
+  </section>
+
   <section id="v-negocio" hidden>
     <form class="ficha caja" id="formNegocio" novalidate>
       <div class="dos">
@@ -159,7 +173,7 @@
       <label style="display:flex;align-items:flex-start;gap:10px;font-weight:600">
         <input id="nCarrusel" type="checkbox" style="width:22px;height:22px;flex:none;margin-top:2px">
         <span>Mostrar el carrusel de ofertas
-          <small style="display:block;font-weight:400">Aparece arriba de los productos con los que tienen rebaja o etiqueta. Si ninguno tiene, no se muestra.</small>
+          <small style="display:block;font-weight:400">Aparece arriba de los productos con tus banners y con los productos que tienen rebaja o etiqueta. Si no hay ninguno, no se muestra.</small>
         </span>
       </label>
       <label>Datos para transferencia
@@ -245,7 +259,7 @@
 <script>
 const $ = (id) => document.getElementById(id);
 const pesos = (n) => "$" + (Number(n) || 0).toLocaleString("es-CL");
-let datos = { config: {}, productos: [], servicios: [] };
+let datos = { config: {}, productos: [], servicios: [], banners: [] };
 let editando = null;        // producto o índice de servicio que se está editando (null = nuevo)
 let fotoNueva = null;       // archivo elegido en el formulario, aún sin subir
 let fotoActual = "";        // ruta de la imagen que ya tiene el producto
@@ -393,7 +407,7 @@ document.querySelectorAll(".pestanas button").forEach((b) => {
   b.onclick = () => {
     document.querySelectorAll(".pestanas button").forEach((x) =>
       x.setAttribute("aria-selected", String(x === b)));
-    ["productos", "servicios", "negocio"].forEach((v) => { $("v-" + v).hidden = v !== b.dataset.vista; });
+    ["productos", "servicios", "banners", "negocio"].forEach((v) => { $("v-" + v).hidden = v !== b.dataset.vista; });
   };
 });
 document.querySelectorAll("[data-cerrar]").forEach((b) => { b.onclick = () => b.closest("dialog").close(); });
@@ -490,9 +504,9 @@ $("pFoto").onchange = () => {
 $("pQuitarFoto").onclick = () => { fotoNueva = null; fotoActual = ""; $("pFoto").value = ""; mostrarFoto(""); };
 
 // Achica la foto a 600 px como máximo y la deja en JPG liviano.
-async function achicar(archivo) {
+async function achicar(archivo, maximo = 600) {
   const mapa = await createImageBitmap(archivo);
-  const escala = Math.min(1, 600 / Math.max(mapa.width, mapa.height));
+  const escala = Math.min(1, maximo / Math.max(mapa.width, mapa.height));
   const lienzo = document.createElement("canvas");
   lienzo.width = Math.round(mapa.width * escala);
   lienzo.height = Math.round(mapa.height * escala);
@@ -504,8 +518,8 @@ async function achicar(archivo) {
     lienzo.toBlob((b) => (b ? ok(b) : mal(new Error("No se pudo procesar la imagen."))), "image/jpeg", 0.85));
 }
 
-async function subirFoto(archivo, nombreProducto) {
-  const blob = await achicar(archivo);
+async function subirFoto(archivo, nombreProducto, maximo) {
+  const blob = await achicar(archivo, maximo);
   const base = (nombreProducto || "foto").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 50) || "foto";
   const ruta = await almacen.subir(blob, base + "-" + Date.now().toString(36) + ".jpg");
@@ -554,6 +568,64 @@ async function eliminarProducto(p) {
   await guardar();
   pintarProductos();
 }
+
+// --- banners del carrusel ---
+function pintarBanners() {
+  if (datos.banners.length === 0) {
+    $("listaBanners").replaceChildren(crear("p", "vacio", "Aún no hay banners."));
+    return;
+  }
+  const categorias = [...new Set(datos.productos.map((x) => x.cat).filter(Boolean))];
+  $("listaBanners").replaceChildren(...datos.banners.map((b, i) => {
+    const fila = crear("div", "item");
+    const img = crear("img", "banner");
+    img.src = vistasLocales[b.imagen] || "/" + b.imagen;
+    img.alt = "";
+    const campos = crear("div", "campos");
+    const texto = crear("input");
+    texto.value = b.texto || "";
+    texto.maxLength = 80;
+    texto.placeholder = "Descripción (para quien no ve la imagen)";
+    texto.setAttribute("aria-label", "Descripción del banner " + (i + 1));
+    texto.onchange = async () => { b.texto = texto.value.trim(); await guardar(); };
+    const destino = crear("select");
+    destino.setAttribute("aria-label", "Al tocar el banner " + (i + 1));
+    destino.append(new Option("Al tocarlo: no hace nada", ""), ...categorias.map((c) => new Option("Al tocarlo: muestra " + c, c)));
+    destino.value = categorias.includes(b.categoria) ? b.categoria : "";
+    destino.onchange = async () => { if (destino.value) b.categoria = destino.value; else delete b.categoria; await guardar(); };
+    campos.append(texto, destino);
+    const acc = crear("div", "acciones");
+    const subir = boton("secundario", "↑ Subir", async () => {
+      datos.banners.splice(i - 1, 0, datos.banners.splice(i, 1)[0]);
+      await guardar(); pintarBanners();
+    });
+    subir.disabled = i === 0;
+    acc.append(subir, boton("peligro", "Eliminar", async () => {
+      if (!confirm("¿Eliminar este banner?")) return;
+      datos.banners.splice(i, 1);
+      await guardar(); pintarBanners();
+    }));
+    fila.append(img, campos, acc);
+    return fila;
+  }));
+}
+$("nuevoBanner").onclick = () => $("bArchivo").click();
+$("bArchivo").onchange = async () => {
+  const archivo = $("bArchivo").files[0];
+  $("bArchivo").value = "";
+  if (!archivo) return;
+  if (datos.banners.length >= 8) { $("bError").textContent = "Máximo 8 banners. Elimina uno para agregar otro."; return; }
+  $("bError").textContent = "";
+  estado("Subiendo imagen…");
+  try {
+    const imagen = await subirFoto(archivo, "banner", 1400);
+    datos.banners.push({ imagen, texto: "" });
+    if (await guardar()) pintarBanners();
+  } catch (err) {
+    estado("No se pudo subir", "mal");
+    $("bError").textContent = "No se pudo subir la imagen: " + err.message;
+  }
+};
 
 // --- servicios ---
 function pintarServicios() {
@@ -649,9 +721,11 @@ async function arrancar() {
     config: c.config || {},
     productos: Array.isArray(c.productos) ? c.productos : [],
     servicios: Array.isArray(c.servicios) ? c.servicios : [],
+    banners: Array.isArray(c.banners) ? c.banners : [],
   };
   pintarProductos();
   pintarServicios();
+  pintarBanners();
   llenarNegocio();
   $("acceso").hidden = true;
   $("panel").hidden = false;
