@@ -93,7 +93,7 @@
     min-width: 40px; height: 40px;
   }
   .cantidad button { background: var(--tarjeta); color: var(--verde); font-size: 1.2rem; font-weight: 700; }
-  .cantidad output { min-width: 22px; text-align: center; font-weight: 700; }
+  .cantidad output { min-width: 22px; text-align: center; font-weight: 700; white-space: nowrap; }
   .agregar { background: var(--verde); color: #fff; padding: 0 14px; font-weight: 600; }
   .vacio { color: var(--suave); padding: 14px 0; }
 
@@ -582,8 +582,26 @@ function controlCantidad(p) {
   mas.setAttribute("aria-label", "Agregar uno de " + p.nombre);
   menos.onclick = () => cambiar(p.id, -1);
   mas.onclick = () => cambiar(p.id, 1);
-  caja.append(menos, crear("output", "", String(n)), mas);
+  caja.append(menos, crear("output", "", textoCantidad(p, n)), mas);
   return caja;
+}
+
+// Productos por peso o volumen: el precio es por kilo o litro y la cantidad sube de a "paso" (0,5 = 500 g).
+// En el carrito se guarda el número de pasos, siempre entero.
+const porMedida = (p) => p.unidad === "kg" || p.unidad === "L";
+const pasoDe = (p) => (porMedida(p) && Number(p.paso) > 0 ? Number(p.paso) : 1);
+const cantidadDe = (p, n) => Math.round(n * pasoDe(p) * 1000) / 1000;
+const importe = (p, n) => Math.round(p.precio * cantidadDe(p, n));
+function textoCantidad(p, n) {
+  if (!porMedida(p)) return String(n);
+  const c = cantidadDe(p, n);
+  if (c < 1) return Math.round(c * 1000) + (p.unidad === "kg" ? " g" : " ml");
+  return c.toLocaleString("es-CL") + " " + p.unidad;
+}
+// "2 × Leche (caja 1 L)" o "1,5 kg de Tomate"
+function textoLinea(p, n) {
+  if (porMedida(p)) return textoCantidad(p, n) + " de " + titulo(p);
+  return n + " × " + titulo(p) + (p.formato ? " (" + p.formato + ")" : "");
 }
 
 // Nombre completo para el resumen y el mensaje: incluye la marca si existe.
@@ -614,8 +632,10 @@ function pintarLista() {
     const fila = crear("div", "producto");
     const datos = crear("div", "datos");
     if (p.marca) datos.append(crear("div", "marca", p.marca));
-    datos.append(crear("div", "nombre", p.nombre), crear("div", "formato", p.formato),
-                 crear("div", "precio", pesos(p.precio)));
+    const formato = porMedida(p)
+      ? [p.formato, "Pide de a " + textoCantidad(p, 1)].filter(Boolean).join(" · ") : p.formato;
+    datos.append(crear("div", "nombre", p.nombre), crear("div", "formato", formato),
+                 crear("div", "precio", pesos(p.precio) + (porMedida(p) ? (p.unidad === "kg" ? " el kilo" : " el litro") : "")));
     fila.append(foto(p), datos, controlCantidad(p));
     return fila;
   }));
@@ -628,16 +648,15 @@ function elegidos() {
 }
 function totales() {
   const items = elegidos();
-  const subtotal = items.reduce((s, p) => s + p.precio * p.n, 0);
-  const unidades = items.reduce((s, p) => s + p.n, 0);
+  const subtotal = items.reduce((s, p) => s + importe(p, p.n), 0);
+  const unidades = items.reduce((s, p) => s + (porMedida(p) ? 1 : p.n), 0);
   return { items, subtotal, unidades, total: subtotal + CONFIG.tarifa };
 }
 
 function lineasPedido(t) {
   return t.items.map((p) => {
     const l = crear("div", "linea");
-    l.append(crear("span", "", p.n + " × " + titulo(p) + " (" + p.formato + ")"),
-             crear("span", "", pesos(p.precio * p.n)));
+    l.append(crear("span", "", textoLinea(p, p.n)), crear("span", "", pesos(importe(p, p.n))));
     return l;
   });
 }
@@ -883,7 +902,7 @@ function armarMensaje() {
     "Pedido — " + $("edificio").value + ", depto " + $("depto").value.trim(),
     "Nombre: " + nombreCompleto(),
     "",
-    ...t.items.map((p) => "• " + p.n + " × " + titulo(p) + " (" + p.formato + ") — " + pesos(p.precio * p.n)),
+    ...t.items.map((p) => "• " + textoLinea(p, p.n) + " — " + pesos(importe(p, p.n))),
   ];
   if (otros) lineas.push("• Otros: " + otros);
   lineas.push(
@@ -1264,7 +1283,7 @@ async function guardarPedido() {
   const fila = {
     nombre: nombreCompleto().slice(0, 80), edificio: $("edificio").value.slice(0, 80),
     depto: $("depto").value.trim().slice(0, 20), pago: $("pago").value, otros: $("otros").value.trim().slice(0, 500),
-    items: t.items.map((p) => ({ id: p.id, nombre: titulo(p), formato: p.formato, precio: p.precio, n: p.n })),
+    items: t.items.map((p) => ({ id: p.id, nombre: titulo(p), formato: p.formato, precio: p.precio, n: p.n, texto: textoLinea(p, p.n) })),
     subtotal: t.subtotal, despacho: CONFIG.tarifa, total: t.total,
   };
   try {
@@ -1283,7 +1302,7 @@ async function pintarHistorial() {
     const fecha = new Date(ped.creado).toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" });
     cuando.append(crear("span", "", fecha), crear("span", "", pesos(Number(ped.total) || 0)));
     const items = Array.isArray(ped.items) ? ped.items : [];
-    const que = items.map((i) => i.n + " × " + i.nombre).join(", ") + (ped.otros ? (items.length ? ", " : "") + ped.otros : "");
+    const que = items.map((i) => i.texto || i.n + " × " + i.nombre).join(", ") + (ped.otros ? (items.length ? ", " : "") + ped.otros : "");
     caja.append(cuando, crear("div", "que", que));
     const disponibles = items.filter((i) => PRODUCTOS.some((p) => p.id === i.id));
     if (disponibles.length) {

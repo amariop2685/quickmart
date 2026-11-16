@@ -178,7 +178,19 @@
     </div>
     <div class="dos">
       <label>Formato <small>Ej.: caja 1 L</small><input id="pFormato"></label>
-      <label>Precio (pesos) <input id="pPrecio" type="number" min="0" step="10" required></label>
+      <label><span id="pPrecioEtiqueta">Precio (pesos)</span> <input id="pPrecio" type="number" min="0" step="10" required></label>
+    </div>
+    <div class="dos">
+      <label>Se vende
+        <select id="pVenta">
+          <option value="">Por unidad</option>
+          <option value="kg">Por peso (kilos)</option>
+          <option value="L">Por volumen (litros)</option>
+        </select>
+      </label>
+      <label id="pPasoCaja" hidden>El cliente pide de a
+        <select id="pPaso"></select>
+      </label>
     </div>
     <label>Categoría <input id="pCat" list="categorias"><datalist id="categorias"></datalist></label>
     <label>Imagen <small>Opcional. Se achica sola para que cargue rápido.</small>
@@ -395,7 +407,7 @@ function pintarProductos() {
     const d = crear("div", "datos");
     if (p.marca) d.append(crear("div", "marca", p.marca));
     d.append(crear("div", "nombre", p.nombre),
-             crear("div", "detalle", [p.formato, p.cat, pesos(p.precio)].filter(Boolean).join(" · ")));
+             crear("div", "detalle", [p.formato, p.cat, pesos(p.precio) + (p.unidad ? " / " + p.unidad + ", de a " + textoPaso(p.unidad, Number(p.paso) || 1) : "")].filter(Boolean).join(" · ")));
     const acc = crear("div", "acciones");
     acc.append(boton("secundario", "Editar", () => abrirProducto(p)),
                boton("peligro", "Eliminar", () => eliminarProducto(p)));
@@ -421,6 +433,8 @@ function abrirProducto(p) {
   $("pFormato").value = p ? p.formato || "" : "";
   $("pPrecio").value = p ? p.precio : "";
   $("pCat").value = p ? p.cat || "" : "";
+  $("pVenta").value = p && (p.unidad === "kg" || p.unidad === "L") ? p.unidad : "";
+  pintarVenta(p ? Number(p.paso) : 0);
   $("pFoto").value = "";
   $("pError").textContent = "";
   mostrarFoto(fotoActual ? vistasLocales[fotoActual] || "/" + fotoActual : "");
@@ -428,6 +442,22 @@ function abrirProducto(p) {
     .map((c) => new Option(c)));
   $("dlgProducto").showModal();
 }
+
+// Venta por peso o volumen: el precio pasa a ser por kilo o por litro y se elige de a cuánto se pide.
+const PASOS = [0.1, 0.25, 0.5, 1];
+function textoPaso(unidad, paso) {
+  return paso < 1 ? Math.round(paso * 1000) + (unidad === "kg" ? " g" : " ml") : paso + (unidad === "kg" ? " kg" : " L");
+}
+function pintarVenta(pasoActual) {
+  const u = $("pVenta").value;
+  $("pPasoCaja").hidden = !u;
+  $("pPrecioEtiqueta").textContent = u === "kg" ? "Precio por kilo (pesos)" : u === "L" ? "Precio por litro (pesos)" : "Precio (pesos)";
+  if (!u) return;
+  const elegido = PASOS.includes(pasoActual) ? pasoActual : (PASOS.includes(Number($("pPaso").value)) ? Number($("pPaso").value) : 0.5);
+  $("pPaso").replaceChildren(...PASOS.map((x) => new Option(textoPaso(u, x), x)));
+  $("pPaso").value = String(elegido);
+}
+$("pVenta").onchange = () => pintarVenta(0);
 
 $("pFoto").onchange = () => {
   fotoNueva = $("pFoto").files[0] || null;
@@ -479,6 +509,8 @@ $("formProducto").addEventListener("submit", async (e) => {
   p.formato = $("pFormato").value.trim();
   p.precio = Math.round(precio);
   p.cat = $("pCat").value.trim() || "Otros";
+  if ($("pVenta").value) { p.unidad = $("pVenta").value; p.paso = Number($("pPaso").value) || 1; }
+  else { delete p.unidad; delete p.paso; }
   const marca = $("pMarca").value.trim();
   if (marca) p.marca = marca; else delete p.marca;
   if (imagen) p.imagen = imagen; else delete p.imagen;
