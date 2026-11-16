@@ -156,6 +156,12 @@
         <label>Pedido mínimo (pesos) <small>0 = sin mínimo</small><input id="nMinimo" type="number" min="0" step="100"></label>
       </div>
       <label>Horario de entregas <input id="nHorario"></label>
+      <label style="display:flex;align-items:flex-start;gap:10px;font-weight:600">
+        <input id="nCarrusel" type="checkbox" style="width:22px;height:22px;flex:none;margin-top:2px">
+        <span>Mostrar el carrusel de ofertas
+          <small style="display:block;font-weight:400">Aparece arriba de los productos con los que tienen rebaja o etiqueta. Si ninguno tiene, no se muestra.</small>
+        </span>
+      </label>
       <label>Datos para transferencia
         <small>Se muestran al cliente cuando elige pagar con transferencia. Escribe un dato por línea, con este formato; cada línea tendrá su botón “Copiar”.</small>
         <textarea id="nTransferencia" rows="6" placeholder="Nombre: Juan Pérez&#10;RUT: 12.345.678-5&#10;Banco: Banco Estado&#10;Tipo de cuenta: Cuenta RUT&#10;Número de cuenta: 12345678&#10;Correo: pagos@quickmart.cl"></textarea>
@@ -603,6 +609,7 @@ function llenarNegocio() {
   $("nMinimo").value = c.minimo ?? 0;
   $("nHorario").value = c.horario || "";
   $("nTransferencia").value = c.transferencia || "";
+  $("nCarrusel").checked = c.carrusel !== false;
   $("nEdificios").value = (c.edificios || []).join("\n");
 }
 
@@ -625,6 +632,7 @@ $("formNegocio").addEventListener("submit", async (e) => {
     minimo: Math.max(0, Math.round(Number($("nMinimo").value) || 0)),
     horario: $("nHorario").value.trim(),
     transferencia: $("nTransferencia").value.trim().slice(0, 600),
+    carrusel: $("nCarrusel").checked,
     edificios,
   };
   if (await guardar()) llenarNegocio();

@@ -102,6 +102,33 @@
     display: inline-block; margin-top: 3px; background: #fde8e9; color: #b00812;
     font-size: .78rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;
   }
+  .ofertas h2 { margin: 16px 0 8px; display: flex; align-items: center; justify-content: space-between; }
+  .ofertas .flechas { display: flex; gap: 6px; }
+  .ofertas .flechas button {
+    font: inherit; font-weight: 700; cursor: pointer; width: 36px; height: 36px; border-radius: 999px;
+    background: var(--tarjeta); color: var(--texto); border: 1px solid var(--borde);
+  }
+  .carrusel {
+    display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth;
+    padding: 12px 2px 8px; margin: -12px -2px 0; scrollbar-width: none;
+  }
+  .carrusel::-webkit-scrollbar { display: none; }
+  .oferta {
+    position: relative; flex: 0 0 156px; scroll-snap-align: start; background: var(--tarjeta);
+    border: 1px solid var(--verde); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .oferta .foto {
+    width: 100%; height: 96px; border-radius: 10px; object-fit: contain; background: var(--verde-claro);
+    color: var(--suave); display: grid; place-items: center; font-weight: 700; font-size: 1.6rem;
+  }
+  .oferta .nombre { font-weight: 600; line-height: 1.2; font-size: .92rem; min-height: 2.4em; }
+  .oferta .precio { font-weight: 700; }
+  .oferta .antes { color: var(--suave); font-weight: 400; font-size: .85rem; text-decoration: line-through; margin-left: 5px; white-space: nowrap; }
+  .oferta .ahorra { align-self: flex-start; background: #fde8e9; color: #b00812; font-size: .76rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; }
+  .oferta .control { margin-top: auto; padding-top: 6px; }
+  .oferta .agregar { width: 100%; }
+  .oferta .cantidad { justify-content: space-between; }
+  @media (prefers-reduced-motion: reduce) { .carrusel { scroll-behavior: auto; } }
   .cantidad { display: flex; align-items: center; gap: 6px; }
   .cantidad button, .agregar {
     font: inherit; cursor: pointer; border-radius: 10px; border: 1px solid var(--verde);
@@ -262,6 +289,15 @@
   <section id="vistaProductos">
   <div class="tienda" id="paso1">
     <div>
+      <section class="ofertas" id="ofertas" aria-label="Ofertas" hidden>
+        <h2>Ofertas
+          <span class="flechas">
+            <button type="button" id="ofertaAntes" aria-label="Ofertas anteriores">‹</button>
+            <button type="button" id="ofertaSigue" aria-label="Más ofertas">›</button>
+          </span>
+        </h2>
+        <div class="carrusel" id="carrusel"></div>
+      </section>
       <div class="buscador">
         <input id="buscar" type="search" placeholder="Buscar producto…" aria-label="Buscar producto">
       </div>
@@ -577,7 +613,7 @@ function pintarFiltros() {
 function cambiar(id, delta) {
   const n = Math.max(0, Math.min(99, (carrito[id] || 0) + delta));
   if (n === 0) delete carrito[id]; else carrito[id] = n;
-  pintarLista(); pintarResumen(); guardar();
+  pintarLista(); pintarOfertas(); pintarResumen(); guardar();
 }
 
 function controlCantidad(p) {
@@ -670,6 +706,51 @@ function pintarLista() {
   }));
   $("sinResultados").hidden = visibles.length > 0;
 }
+
+// --- carrusel de ofertas: productos con rebaja o con etiqueta ---
+const enOferta = (p) => Number(p.antes) > p.precio || (Array.isArray(p.etiquetas) && p.etiquetas.some((e) => e && e.texto));
+
+function pintarOfertas() {
+  const ofertas = CONFIG.carrusel === false ? [] : PRODUCTOS.filter(enOferta);   // se apaga desde la administración
+  $("ofertas").hidden = ofertas.length === 0;
+  $("carrusel").replaceChildren(...ofertas.map((p) => {
+    const t = crear("div", "oferta");
+    const medida = porMedida(p) ? (p.unidad === "kg" ? " el kilo" : " el litro") : "";
+    const precio = crear("div", "precio", pesos(p.precio) + medida);
+    const antes = Number(p.antes) || 0;
+    if (antes > p.precio) precio.append(crear("span", "antes", pesos(antes)));
+    t.append(foto(p), crear("div", "nombre", titulo(p)), precio);
+    if (antes > p.precio) t.append(crear("div", "ahorra", "Ahorra " + pesos(antes - p.precio)));
+    const control = crear("div", "control");
+    control.append(controlCantidad(p));
+    t.append(control);
+    const e = (p.etiquetas || []).find((x) => x && x.texto);
+    if (e) t.append(crear("span", "etiqueta izq " + (["rojo", "azul", "verde", "naranja"].includes(e.color) ? e.color : "rojo"), String(e.texto).slice(0, 18)));
+    return t;
+  }));
+  $("ofertaAntes").parentElement.hidden = ofertas.length < 2;
+}
+
+// Avanza sola cada 4 segundos; se detiene un rato si el cliente la toca.
+let pausaOfertas = 0;
+function moverOfertas(sentido) {
+  const c = $("carrusel");
+  const paso = (c.firstElementChild ? c.firstElementChild.offsetWidth : 156) + 10;
+  const fin = c.scrollLeft + c.clientWidth >= c.scrollWidth - 4;
+  if (sentido > 0 && fin) c.scrollTo({ left: 0 });
+  else if (sentido < 0 && c.scrollLeft <= 4) c.scrollTo({ left: c.scrollWidth });
+  else c.scrollBy({ left: sentido * paso });
+}
+["pointerdown", "touchstart", "wheel", "focusin"].forEach((ev) =>
+  $("ofertas").addEventListener(ev, () => { pausaOfertas = Date.now() + 10000; }, { passive: true }));
+$("ofertaAntes").onclick = () => moverOfertas(-1);
+$("ofertaSigue").onclick = () => moverOfertas(1);
+setInterval(() => {
+  const c = $("carrusel");
+  if (document.hidden || Date.now() < pausaOfertas || c.offsetParent === null || c.scrollWidth <= c.clientWidth + 4) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  moverOfertas(1);
+}, 4000);
 
 // --- resumen y totales ---
 function elegidos() {
@@ -1340,7 +1421,7 @@ async function pintarHistorial() {
       b.onclick = () => {
         carrito = {};
         disponibles.forEach((i) => { carrito[i.id] = Math.max(1, Math.min(99, Number(i.n) || 1)); });
-        guardar(); pintarLista(); pintarResumen();
+        guardar(); pintarLista(); pintarOfertas(); pintarResumen();
         paso = 1; mostrarVista("productos");
         $("pedido").scrollIntoView();
       };
@@ -1428,6 +1509,7 @@ async function iniciar() {
   pintarServicios();
   pintarFiltros();
   pintarLista();
+  pintarOfertas();
   pintarResumen();
   const m = /^#paso([123])$/.exec(location.hash);
   mostrarPaso(m ? Number(m[1]) : 1, false);
