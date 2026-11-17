@@ -379,7 +379,12 @@
     position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; border-radius: 999px; padding: 0 5px;
     background: var(--verde); color: #fff; font-size: .72rem; font-weight: 700; display: grid; place-items: center;
   }
-  .pedido .cabeza .textos { display: grid; min-width: 0; }
+  .pedido .cabeza .textos { display: grid; min-width: 0; gap: 2px; }
+  .pedido .cabeza small.abrir {
+    justify-self: start; font-size: .92rem; font-weight: 700; color: var(--texto); white-space: nowrap;
+    background: var(--verde-claro); border: 1px solid var(--borde); border-radius: 999px; padding: 3px 12px;
+  }
+  .pedido .cabeza:hover small.abrir { background: var(--texto); color: #fff; }
   .pedido .enviar { display: inline-flex; align-items: center; gap: 6px; }
   .linea.item { align-items: center; }
   .linea.item > span:first-child { flex: 1; min-width: 0; }
@@ -1082,9 +1087,8 @@ function pintarResumen() {
   $("total").textContent = pesos(t.total);
   const abierto = $("pedido").classList.contains("abierto");
   $("cabezaTotal").textContent = t.unidades ? pesos(t.total) : "Canasta";
-  $("cabezaItems").textContent = t.unidades
-    ? t.unidades + (t.unidades === 1 ? " producto " : " productos ") + (abierto ? "▾" : "▴")
-    : "Vacía";
+  $("cabezaItems").textContent = t.unidades ? (abierto ? "Ocultar lista ▾" : "Ver lista ▴") : "Vacía";
+  $("cabezaItems").classList.toggle("abrir", t.unidades > 0);
   $("cabezaCuenta").hidden = t.unidades === 0;
   $("cabezaCuenta").textContent = String(t.unidades);
   $("pedidoCabeza").setAttribute("aria-label", t.unidades
