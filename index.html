@@ -2117,7 +2117,7 @@ async function guardarPedido() {
     const guardarFila = async () => {
       // con Turnstile, el pedido pasa por la función de servidor que comprueba que no es un bot
       if (usaTurnstile() && tokenTurnstile) {
-        const { data, error } = await nube.functions.invoke("crear-pedido", { body: { pedido: fila, token: tokenTurnstile } });
+        const { data, error } = await nube.functions.invoke("crear-pedido-ts", { body: { pedido: fila, token: tokenTurnstile } });
         reiniciarTurnstile();   // cada comprobación sirve una sola vez
         if (!error && data && data.ok) return { ok: true };
         let detalle = null;
