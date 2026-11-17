@@ -419,6 +419,48 @@
   .detalleCabeza b { font-weight: 600; }
   .pestanas button { display: inline-flex; align-items: center; justify-content: center; }
   .agregar { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
+  /* Diálogos y avisos flotantes propios (reemplazan las alertas del navegador). */
+  .capa {
+    position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px;
+    background: rgba(11, 26, 74, .48); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    animation: capaEntra .16s ease-out;
+  }
+  .dialogo {
+    width: min(380px, 100%); background: #fff; color: #0b1a4a; border-radius: 18px; padding: 24px 22px 18px;
+    text-align: center; box-shadow: 0 24px 60px rgba(11, 26, 74, .35); animation: dialogoEntra .2s cubic-bezier(.2, .9, .3, 1.2);
+  }
+  .dialogo .circulo {
+    width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 12px; display: grid; place-items: center;
+    background: #eef0f8; color: #0b1a4a;
+  }
+  .dialogo.peligro .circulo { background: #fde8e9; color: #d90b16; }
+  .dialogo .circulo svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .dialogo h3 { margin: 0 0 6px; font-size: 1.15rem; font-weight: 700; }
+  .dialogo p { margin: 0; color: #5b6482; font-size: .95rem; font-weight: 400; }
+  .dialogo .botones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+  .dialogo .botones.uno { grid-template-columns: 1fr; }
+  .dialogo .botones button {
+    font: inherit; font-weight: 600; cursor: pointer; border-radius: 12px; padding: 12px 10px;
+    border: 1px solid #dfe2ec; background: #fff; color: #0b1a4a;
+  }
+  .dialogo .botones .si { background: #0b1a4a; border-color: #0b1a4a; color: #fff; }
+  .dialogo.peligro .botones .si { background: #d90b16; border-color: #d90b16; }
+  .avisos {
+    position: fixed; z-index: 110; top: 14px; right: 14px; left: 14px; display: grid; gap: 8px;
+    justify-items: end; pointer-events: none;
+  }
+  .avisoFlotante {
+    pointer-events: auto; display: flex; align-items: center; gap: 10px; max-width: min(380px, 100%);
+    background: #0b1a4a; color: #fff; border-radius: 12px; padding: 12px 16px; font-size: .95rem; font-weight: 500;
+    box-shadow: 0 12px 30px rgba(11, 26, 74, .35); animation: avisoEntra .22s ease-out;
+  }
+  .avisoFlotante.ok { background: #17663a; } .avisoFlotante.mal { background: #b00812; }
+  .avisoFlotante.sale { opacity: 0; transform: translateY(-8px); transition: opacity .25s, transform .25s; }
+  @keyframes capaEntra { from { opacity: 0; } }
+  @keyframes dialogoEntra { from { opacity: 0; transform: translateY(14px) scale(.96); } }
+  @keyframes avisoEntra { from { opacity: 0; transform: translateY(-10px); } }
+  @media (max-width: 520px) { .avisos { justify-items: stretch; } .avisoFlotante { max-width: none; } }
+  @media (prefers-reduced-motion: reduce) { .capa, .dialogo, .avisoFlotante { animation: none; } }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -761,6 +803,85 @@ function guardar() {
   } catch (e) { /* ignorar */ }
 }
 
+// --- diálogos y avisos flotantes propios ---
+const DIBUJOS = {
+  pregunta: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/>',
+  basura: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
+  alerta: '<path d="M12 3 2.5 20h19L12 3z"/><path d="M12 10v4M12 17h.01"/>',
+};
+// Pregunta con dos botones. Devuelve una promesa: true si acepta, false si cancela (o pulsa Esc o fuera).
+function confirmar(opciones) {
+  const o = Object.assign({ titulo: "", texto: "", aceptar: "Aceptar", cancelar: "Cancelar", peligro: false, dibujo: "pregunta" }, opciones);
+  return new Promise((resolver) => {
+    const antes = document.activeElement;
+    const capa = document.createElement("div");
+    capa.className = "capa";
+    const d = document.createElement("div");
+    d.className = "dialogo" + (o.peligro ? " peligro" : "");
+    d.setAttribute("role", "alertdialog");
+    d.setAttribute("aria-modal", "true");
+    const circulo = document.createElement("div");
+    circulo.className = "circulo";
+    circulo.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + DIBUJOS[o.dibujo] + "</svg>";   // dibujo fijo del código
+    const h = document.createElement("h3");
+    h.textContent = o.titulo;
+    h.id = "dialogoTitulo";
+    d.setAttribute("aria-labelledby", h.id);
+    d.append(circulo, h);
+    if (o.texto) { const p = document.createElement("p"); p.textContent = o.texto; d.append(p); }
+    const botones = document.createElement("div");
+    botones.className = "botones" + (o.cancelar ? "" : " uno");
+    const cerrar = (valor) => {
+      document.removeEventListener("keydown", teclas, true);
+      capa.remove();
+      if (antes && antes.focus) antes.focus();
+      resolver(valor);
+    };
+    const si = document.createElement("button");
+    si.type = "button"; si.className = "si"; si.textContent = o.aceptar;
+    si.onclick = () => cerrar(true);
+    let no = null;
+    if (o.cancelar) {
+      no = document.createElement("button");
+      no.type = "button"; no.textContent = o.cancelar;
+      no.onclick = () => cerrar(false);
+      botones.append(no);
+    }
+    botones.append(si);
+    d.append(botones);
+    capa.append(d);
+    capa.addEventListener("mousedown", (e) => { if (e.target === capa) cerrar(false); });
+    const teclas = (e) => {
+      if (e.key === "Escape") { e.preventDefault(); cerrar(false); }
+      if (e.key === "Tab") {   // el foco no sale del diálogo
+        e.preventDefault();
+        const lista = [no, si].filter(Boolean);
+        lista[(lista.indexOf(document.activeElement) + (e.shiftKey ? lista.length - 1 : 1)) % lista.length].focus();
+      }
+    };
+    document.addEventListener("keydown", teclas, true);
+    // si hay una ficha abierta (va en la capa superior del navegador), el diálogo se pone dentro para quedar encima
+    (document.querySelector("dialog[open]") || document.body).append(capa);
+    (no || si).focus();
+  });
+}
+// Aviso breve que flota arriba y se va solo. tipo: "" | "ok" | "mal"
+function avisar(texto, tipo) {
+  let caja = document.querySelector(".avisos");
+  if (!caja) {
+    caja = document.createElement("div");
+    caja.className = "avisos";
+    caja.setAttribute("role", "status");
+    caja.setAttribute("aria-live", "polite");
+    document.body.append(caja);
+  }
+  const a = document.createElement("div");
+  a.className = "avisoFlotante" + (tipo ? " " + tipo : "");
+  a.textContent = texto;
+  caja.append(a);
+  setTimeout(() => { a.classList.add("sale"); setTimeout(() => a.remove(), 300); }, tipo === "mal" ? 6000 : 2800);
+}
+
 // --- íconos (dibujados en línea, sin archivos externos) ---
 const ICONOS = {
   persona: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
@@ -1095,7 +1216,7 @@ function pintarResumen() {
       quitar.type = "button";
       quitar.setAttribute("aria-label", "Quitar " + p.nombre + " de la canasta");
       quitar.title = "Quitar";
-      quitar.onclick = () => cambiar(p.id, -99);
+      quitar.onclick = () => { cambiar(p.id, -99); avisar("Quitaste " + p.nombre); };
       l.classList.add("item");
       l.append(quitar);
       return l;
@@ -1119,10 +1240,16 @@ function pintarResumen() {
 $("cabezaIcono").prepend(icono("canasta"));
 conIcono($("vaciar"), "basura", "Vaciar");
 $("vaciar").setAttribute("aria-label", "Vaciar la canasta");
-$("vaciar").onclick = () => {
-  if (!confirm("¿Vaciar toda la canasta?")) return;
+$("vaciar").onclick = async () => {
+  const n = Object.keys(carrito).length;
+  const si = await confirmar({
+    titulo: "¿Vaciar la canasta?", texto: n === 1 ? "Se quitará el producto que agregaste." : "Se quitarán los " + n + " productos que agregaste.",
+    aceptar: "Sí, vaciar", cancelar: "No, volver", peligro: true, dibujo: "basura",
+  });
+  if (!si) return;
   carrito = {};
   pintarLista(); pintarOfertas(); pintarResumen(); guardar();
+  avisar("Canasta vacía");
 };
 $("irDatos").append(icono("flecha"));
 conIcono($("tabProductos"), "bolsa", "Productos");
