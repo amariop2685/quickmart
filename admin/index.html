@@ -55,6 +55,18 @@
   .item .acciones { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .item .acciones button { padding: 7px 12px; font-size: .9rem; }
   .vacio { color: var(--suave); padding: 12px 0; }
+  .porReponer {
+    background: #fff4dc; border: 1px solid #f0d28a; color: #6b4300; border-radius: 12px; padding: 12px 14px; margin: 0 0 12px;
+    display: grid; gap: 8px;
+  }
+  .porReponer b { font-size: 1rem; }
+  .porReponer ul { margin: 0; padding-left: 18px; }
+  .porReponer button { justify-self: start; font: inherit; font-weight: 600; cursor: pointer; border-radius: 10px; padding: 7px 12px; background: #fff; color: #6b4300; border: 1px solid #f0d28a; }
+  .stock { display: inline-flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .stock .cuanto { font-size: .82rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #e7f5ec; color: #17663a; white-space: nowrap; }
+  .stock.bajo .cuanto { background: #fff4dc; color: #8a5600; }
+  .stock.cero .cuanto { background: #fde8e9; color: #b00812; }
+  .stock button { font: inherit; font-weight: 700; cursor: pointer; width: 30px; height: 30px; border-radius: 8px; background: #fff; color: var(--texto); border: 1px solid var(--borde); }
   .cuenta { color: var(--suave); font-size: .9rem; }
 
   form.ficha { display: grid; gap: 12px; }
@@ -175,6 +187,7 @@
       <input id="buscar" type="search" placeholder="Buscar por nombre, marca o categoría…" aria-label="Buscar producto">
       <button class="principal" id="nuevoProducto" type="button">+ Agregar producto</button>
     </div>
+    <div class="porReponer" id="porReponer" hidden></div>
     <p class="cuenta" id="cuenta"></p>
     <div class="lista" id="listaProductos"></div>
   </section>
@@ -252,6 +265,14 @@
       </label>
       <label id="pPasoCaja" hidden>El cliente pide de a
         <select id="pPaso"></select>
+      </label>
+    </div>
+    <div class="dos">
+      <label>Stock que tienes <small>Opcional. Déjalo vacío si no llevas stock de este producto.</small>
+        <input id="pStock" type="number" min="0" step="any" inputmode="decimal">
+      </label>
+      <label>Avisarme cuando queden <small>Cuando el stock baje a esta cantidad o menos, aparece en “Por reponer”.</small>
+        <input id="pStockMin" type="number" min="0" step="any" inputmode="decimal">
       </label>
     </div>
     <label>Precio normal, antes de la rebaja <small>Opcional. Si es mayor que el precio, la tienda muestra el precio anterior tachado y la etiqueta “Ahorra”.</small>
@@ -552,10 +573,46 @@ function miniatura(p) {
   return img;
 }
 
+// --- stock ---
+const redondo = (n) => Math.round(n * 1000) / 1000;
+const conStock = (p) => Number.isFinite(p.stock);
+const porReponer = (p) => conStock(p) && p.stock <= (Number(p.stockMin) || 0);
+const unidadStock = (p) => (p.unidad ? " " + p.unidad : "");
+function textoStock(p) {
+  if (p.stock <= 0) return "Agotado";
+  return (porReponer(p) ? "Quedan " : "Stock ") + p.stock.toLocaleString("es-CL") + unidadStock(p);
+}
+let soloReponer = false;
+let guardadoPendiente = 0;
+// Los toques seguidos en − y + se guardan juntos, un momento después del último.
+function guardarLuego() {
+  clearTimeout(guardadoPendiente);
+  estado("Cambios sin guardar…");
+  guardadoPendiente = setTimeout(guardar, 1500);
+}
+function ajustarStock(p, sentido) {
+  const salto = p.unidad ? (Number(p.paso) || 1) : 1;
+  p.stock = Math.max(0, redondo(p.stock + sentido * salto));
+  pintarProductos();
+  guardarLuego();
+}
+function pintarReponer() {
+  const lista = datos.productos.filter(porReponer);
+  $("porReponer").hidden = lista.length === 0;
+  if (lista.length === 0) { soloReponer = false; return; }
+  const ul = crear("ul");
+  ul.append(...lista.map((p) => crear("li", "", p.nombre + (p.marca ? " " + p.marca : "") + " — " +
+    (p.stock <= 0 ? "agotado" : "quedan " + p.stock.toLocaleString("es-CL") + unidadStock(p)))));
+  const ver = boton("", soloReponer ? "Ver todos los productos" : "Ver solo estos", () => { soloReponer = !soloReponer; pintarProductos(); });
+  $("porReponer").replaceChildren(crear("b", "", "⚠ Por reponer: " + lista.length + (lista.length === 1 ? " producto" : " productos")), ul, ver);
+}
+
 function pintarProductos() {
+  pintarReponer();
   const q = $("buscar").value.trim().toLowerCase();
   const visibles = datos.productos.filter((p) =>
-    !q || [p.nombre, p.marca, p.cat, p.formato].join(" ").toLowerCase().includes(q));
+    (!soloReponer || porReponer(p)) &&
+    (!q || [p.nombre, p.marca, p.cat, p.formato].join(" ").toLowerCase().includes(q)));
   $("cuenta").textContent = datos.productos.length + " productos en el catálogo" +
     (q ? " · " + visibles.length + " coinciden" : "");
   if (visibles.length === 0) {
@@ -568,6 +625,16 @@ function pintarProductos() {
     if (p.marca) d.append(crear("div", "marca", p.marca));
     d.append(crear("div", "nombre", p.nombre),
              crear("div", "detalle", [p.formato, p.cat, pesos(p.precio) + (p.unidad ? " / " + p.unidad + ", de a " + textoPaso(p.unidad, Number(p.paso) || 1) : "")].filter(Boolean).join(" · ")));
+    if (conStock(p)) {
+      const st = crear("div", "stock" + (p.stock <= 0 ? " cero" : porReponer(p) ? " bajo" : ""));
+      const menos = boton("", "−", () => ajustarStock(p, -1));
+      const mas = boton("", "+", () => ajustarStock(p, 1));
+      menos.setAttribute("aria-label", "Descontar del stock de " + p.nombre);
+      mas.setAttribute("aria-label", "Sumar al stock de " + p.nombre);
+      menos.disabled = p.stock <= 0;
+      st.append(menos, crear("span", "cuanto", textoStock(p)), mas);
+      d.append(st);
+    }
     const acc = crear("div", "acciones");
     acc.append(boton("secundario", "Editar", () => abrirProducto(p)),
                boton("peligro", "Eliminar", () => eliminarProducto(p)));
@@ -594,6 +661,8 @@ function abrirProducto(p) {
   $("pPrecio").value = p ? p.precio : "";
   $("pCat").value = p ? p.cat || "" : "";
   $("pAntes").value = p && p.antes ? p.antes : "";
+  $("pStock").value = p && Number.isFinite(p.stock) ? p.stock : "";
+  $("pStockMin").value = p && Number.isFinite(p.stockMin) ? p.stockMin : "";
   $("pPais").value = p && p.pais ? p.pais : "";
   if ($("pPais").value !== (p && p.pais ? p.pais : "")) $("pPais").value = "";
   $("pPaisLado").value = p && p.paisLado === "izq" ? "izq" : "der";
@@ -698,6 +767,10 @@ $("formProducto").addEventListener("submit", async (e) => {
   p.precio = Math.round(precio);
   p.cat = $("pCat").value.trim() || "Otros";
   if (antes > precio) p.antes = antes; else delete p.antes;
+  if ($("pStock").value !== "" && Number($("pStock").value) >= 0) {
+    p.stock = redondo(Number($("pStock").value));
+    p.stockMin = $("pStockMin").value !== "" && Number($("pStockMin").value) >= 0 ? redondo(Number($("pStockMin").value)) : 0;
+  } else { delete p.stock; delete p.stockMin; }
   if ($("pPais").value) { p.pais = $("pPais").value; p.paisLado = $("pPaisLado").value; }
   else { delete p.pais; delete p.paisLado; }
   if (p.pais === "otra") { p.paisNombre = $("pPaisNombre").value.trim().slice(0, 30); p.paisImagen = paisImagen; }

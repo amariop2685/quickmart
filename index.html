@@ -461,6 +461,9 @@
   @keyframes avisoEntra { from { opacity: 0; transform: translateY(-10px); } }
   @media (max-width: 520px) { .avisos { justify-items: stretch; } .avisoFlotante { max-width: none; } }
   @media (prefers-reduced-motion: reduce) { .capa, .dialogo, .avisoFlotante { animation: none; } }
+  .agregar.agotado { background: #eef0f8; border-color: #eef0f8; color: var(--suave); opacity: 1; }
+  .pocas { color: #8a5600; font-size: .78rem; font-weight: 600; }
+  .oferta .pocas { order: 5; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -787,7 +790,9 @@ function cargar() {
     const g = JSON.parse(localStorage.getItem(CLAVE) || "{}");
     if (g.carrito) {
       for (const id in g.carrito) {
-        if (PRODUCTOS.some((p) => p.id === id) && g.carrito[id] > 0) carrito[id] = g.carrito[id];
+        const prod = PRODUCTOS.find((p) => p.id === id);   // respeta el stock actual
+        const cabe = prod ? Math.min(g.carrito[id], maximoDe(prod)) : 0;
+        if (cabe > 0) carrito[id] = cabe;
       }
     }
     $("nombre").value = g.nombre || "";
@@ -927,14 +932,27 @@ function pintarFiltros() {
   }));
 }
 
+// Stock (opcional): cuántos "pasos" de un producto se pueden pedir como máximo.
+const conStock = (p) => Number.isFinite(p.stock);
+const maximoDe = (p) => (conStock(p) ? Math.max(0, Math.floor(p.stock / pasoDe(p) + 1e-9)) : 99);
+const pocoStock = (p) => conStock(p) && p.stock > 0 && p.stock <= (Number(p.stockMin) || 0);
+
 function cambiar(id, delta) {
-  const n = Math.max(0, Math.min(99, (carrito[id] || 0) + delta));
+  const prod = PRODUCTOS.find((x) => x.id === id);
+  const tope = prod ? Math.min(99, maximoDe(prod)) : 99;
+  const n = Math.max(0, Math.min(tope, (carrito[id] || 0) + delta));
   if (n === 0) delete carrito[id]; else carrito[id] = n;
   pintarLista(); pintarOfertas(); pintarResumen(); guardar();
 }
 
 function controlCantidad(p) {
   const n = carrito[p.id] || 0;
+  if (n === 0 && maximoDe(p) === 0) {   // sin stock: no se puede pedir
+    const b = crear("button", "agregar agotado", "Agotado");
+    b.type = "button";
+    b.disabled = true;
+    return b;
+  }
   if (n === 0) {
     const b = conIcono(crear("button", "agregar"), "mas", "Agregar");
     b.type = "button";
@@ -950,6 +968,7 @@ function controlCantidad(p) {
   mas.setAttribute("aria-label", "Agregar uno de " + p.nombre);
   menos.onclick = () => cambiar(p.id, -1);
   mas.onclick = () => cambiar(p.id, 1);
+  if (n >= Math.min(99, maximoDe(p))) { mas.disabled = true; mas.title = "No queda más stock"; }
   caja.append(menos, crear("output", "", textoCantidad(p, n)), mas);
   return caja;
 }
@@ -1049,6 +1068,7 @@ function tarjetaProducto(p, normal) {
   const formato = porMedida(p) ? "De a " + textoCantidad(p, 1) : p.formato;
   t.append(crear("div", "nombre", p.nombre), crear("div", "formato", formato || ""), precio);
   if (antes > p.precio) t.append(crear("div", "ahorra", "Ahorra " + pesos(antes - p.precio)));
+  if (pocoStock(p)) t.append(crear("div", "pocas", "Últimas unidades"));
   const control = crear("div", "control");
   control.append(controlCantidad(p));
   t.append(control, ...etiquetasDe(p));
