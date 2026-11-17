@@ -206,19 +206,8 @@
   .dato { padding: 4px 0; }
   .dato b { display: block; font-size: .8rem; color: var(--suave); font-weight: 600; }
   @media (min-width: 900px) {
-    body { padding-bottom: 32px; }
-    .ancho { max-width: 1040px; }
-    .tienda { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 24px; align-items: start; }
-    .pedido {
-      position: sticky; top: 16px; z-index: auto; display: block; margin-top: 16px;
-      border: 1px solid var(--borde); border-radius: 12px; box-shadow: none; padding: 14px;
-      max-height: calc(100vh - 32px); overflow-y: auto;
-    }
-    .pedido h2 { display: block; margin: 0 0 8px; }
-    .pedido .cabeza { display: none; }
-    .pedido .detalle { display: block; max-height: none; border-bottom: 0; padding-bottom: 0; }
-    .pedido .enviar { width: 100%; margin-top: 12px; }
-    .pedido .error { margin-top: 6px; }
+    .ancho { max-width: 1240px; padding: 0 24px; }
+    .pedido { padding-left: max(24px, calc((100vw - 1192px) / 2)); padding-right: max(24px, calc((100vw - 1192px) / 2)); }
   }
   .pestanas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
   .pestanas button {
@@ -334,6 +323,68 @@
   .bandera.chica.cn::after { content: none; }
   .bandera.jp { background: radial-gradient(circle, #bc002d 30%, #fff 31%); }
   .bandera.es { background: linear-gradient(#aa151b 25%, #f1bf00 25% 75%, #aa151b 75%); }
+  /* Íconos de línea: heredan el color del texto. */
+  .ico { width: 1.25em; height: 1.25em; flex: none; vertical-align: -0.25em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  button .ico + span, a .ico + span { margin-left: 6px; }
+
+  /* Cabecera: logo e inicio de sesión arriba, buscador grande debajo. */
+  header { padding: 12px 0 14px; }
+  header .fila1 { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  header h1 { margin: 0; }
+  header h1 img { max-width: 170px; margin-left: -4px; }
+  header p { display: none; }
+  .btnCuenta {
+    position: static; display: inline-flex; align-items: center; white-space: nowrap;
+    font-size: .88rem; font-weight: 600; padding: 9px 14px;
+  }
+  .buscador { position: relative; margin: 12px 0 0; }
+  .buscador .ico { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; color: var(--suave); pointer-events: none; }
+  .buscador input {
+    height: 52px; font-size: 1.05rem; padding: 0 16px 0 48px; border-radius: 999px;
+    border: 2px solid var(--texto); background: #fff;
+  }
+  .buscador input:focus { outline: 3px solid rgba(217, 11, 22, .25); outline-offset: 0; border-color: var(--verde); }
+  .pasos { margin-top: 12px; }
+  @media (min-width: 900px) {
+    header .ancho { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 28px; align-items: center; }
+    header .fila1 { display: contents; }
+    header h1 { grid-column: 1; grid-row: 1; }
+    header h1 img { max-width: 210px; }
+    .buscador { grid-column: 2; grid-row: 1; margin: 0 190px 0 0; }
+    .btnCuenta { grid-column: 2; grid-row: 1; justify-self: end; }
+    .pasos { grid-column: 1 / -1; }
+  }
+
+  /* Carruseles de lado a lado de la página. */
+  .carrusel { margin-left: -16px; margin-right: -16px; padding-left: 16px; padding-right: 16px; scroll-padding-left: 16px; }
+  @media (min-width: 900px) {
+    .carrusel { margin-left: -24px; margin-right: -24px; padding-left: 24px; padding-right: 24px; scroll-padding-left: 24px; }
+    .oferta, .oferta.normal { flex-basis: 184px; }
+    .oferta .foto { height: 150px; }
+  }
+
+  /* Canasta */
+  .pedido .cabeza { display: flex; align-items: center; gap: 12px; }
+  .pedido .cabeza .canasta { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--verde-claro); }
+  .pedido .cabeza .canasta .ico { width: 24px; height: 24px; }
+  .pedido .cabeza .cuenta {
+    position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; border-radius: 999px; padding: 0 5px;
+    background: var(--verde); color: #fff; font-size: .72rem; font-weight: 700; display: grid; place-items: center;
+  }
+  .pedido .cabeza .textos { display: grid; min-width: 0; }
+  .pedido .enviar { display: inline-flex; align-items: center; gap: 6px; }
+  .linea.item { align-items: center; }
+  .linea.item > span:first-child { flex: 1; min-width: 0; }
+  .quitar, .vaciar {
+    font: inherit; cursor: pointer; background: none; border: 0; color: var(--suave); border-radius: 8px;
+    display: inline-flex; align-items: center; padding: 6px;
+  }
+  .quitar:hover, .vaciar:hover { color: var(--verde); background: #fde8e9; }
+  .vaciar { font-size: .86rem; font-weight: 500; padding: 6px 8px; margin: 0 0 4px auto; }
+  .detalleCabeza { display: flex; align-items: center; justify-content: space-between; }
+  .detalleCabeza b { font-weight: 600; }
+  .pestanas button { display: inline-flex; align-items: center; justify-content: center; }
+  .agregar { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -341,9 +392,15 @@
 
 <header>
   <div class="ancho">
-    <button type="button" class="btnCuenta" id="btnCuenta" hidden>Entrar</button>
-    <h1><img id="logo" src="logo.webp" width="2000" height="667" alt=""></h1>
+    <div class="fila1">
+      <h1><img id="logo" src="logo.webp" width="2000" height="667" alt=""></h1>
+      <button type="button" class="btnCuenta" id="btnCuenta" hidden></button>
+    </div>
     <p id="bajada"></p>
+    <div class="buscador" role="search">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="buscar" type="search" placeholder="¿Qué necesitas hoy?" aria-label="Buscar producto" enterkeyhint="search">
+    </div>
     <nav class="pasos" id="pasos" aria-label="Pasos del pedido"><button type="button" data-paso="1">1. Elige</button><button type="button" data-paso="2">2. Tus datos</button><button type="button" data-paso="3">3. Enviar</button></nav>
   </div>
 </header>
@@ -378,9 +435,6 @@
         </h2>
         <div class="carrusel" id="carrusel"></div>
       </section>
-      <div class="buscador">
-        <input id="buscar" type="search" placeholder="Buscar producto…" aria-label="Buscar producto">
-      </div>
       <div class="filtros" id="filtros"></div>
 
       <div class="lista" id="lista" style="margin-top:12px"></div>
@@ -394,6 +448,10 @@
     <aside class="pedido" id="pedido" aria-label="Tu pedido">
       <h2>Tu pedido</h2>
       <div class="detalle" id="pedidoDetalle">
+        <div class="detalleCabeza">
+          <b>Tu canasta</b>
+          <button type="button" class="vaciar" id="vaciar" hidden></button>
+        </div>
         <div id="resumen"></div>
         <div class="linea"><span>Subtotal referencial</span><span id="subtotal"></span></div>
         <div class="linea"><span>Despacho</span><span id="tarifa"></span></div>
@@ -401,10 +459,13 @@
         <p class="nota">Los precios son referenciales. El total final se confirma por WhatsApp antes de la entrega.</p>
       </div>
       <button type="button" class="cabeza" id="pedidoCabeza" aria-expanded="false" aria-controls="pedidoDetalle">
-        <strong id="cabezaTotal"></strong>
-        <small id="cabezaItems"></small>
+        <span class="canasta" id="cabezaIcono"><span class="cuenta" id="cabezaCuenta" hidden></span></span>
+        <span class="textos">
+          <strong id="cabezaTotal"></strong>
+          <small id="cabezaItems"></small>
+        </span>
       </button>
-      <button type="button" class="enviar" id="irDatos">Paso 2: tus datos →</button>
+      <button type="button" class="enviar" id="irDatos"><span>Continuar</span></button>
       <p class="error" id="error1" role="alert"></p>
     </aside>
   </div>
@@ -671,6 +732,32 @@ function guardar() {
   } catch (e) { /* ignorar */ }
 }
 
+// --- íconos (dibujados en línea, sin archivos externos) ---
+const ICONOS = {
+  persona: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  ajustes: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.9-1.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  canasta: '<path d="M3 4h2l2.4 11.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L20.5 8H6"/><circle cx="9.5" cy="20" r="1.3"/><circle cx="17.5" cy="20" r="1.3"/>',
+  basura: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
+  mas: '<path d="M12 5v14M5 12h14"/>',
+  flecha: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  bolsa: '<path d="M6 8h12l1 12H5L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  llave: '<path d="M14.5 6.5a4 4 0 0 0-5.3 5.3L3 18v3h3l6.2-6.2a4 4 0 0 0 5.3-5.3l-2.6 2.6-2.4-2.4 2-3.2z"/>',
+};
+function icono(nombre) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "ico");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  svg.innerHTML = ICONOS[nombre];   // contenido fijo del propio código, nunca texto de usuarios
+  return svg;
+}
+// Deja un botón con ícono y, si se indica, un texto corto al lado.
+function conIcono(el, nombre, texto) {
+  el.replaceChildren(icono(nombre));
+  if (texto) el.append(crear("span", "", texto));
+  return el;
+}
+
 // --- catálogo ---
 function crear(etiqueta, clase, texto) {
   const el = document.createElement(etiqueta);
@@ -699,7 +786,7 @@ function cambiar(id, delta) {
 function controlCantidad(p) {
   const n = carrito[p.id] || 0;
   if (n === 0) {
-    const b = crear("button", "agregar", "Agregar");
+    const b = conIcono(crear("button", "agregar"), "mas", "Agregar");
     b.type = "button";
     b.setAttribute("aria-label", "Agregar " + p.nombre);
     b.onclick = () => cambiar(p.id, 1);
@@ -946,20 +1033,47 @@ function lineasPedido(t) {
 function pintarResumen() {
   const t = totales();
   if (t.items.length === 0) {
-    $("resumen").replaceChildren(crear("p", "vacio", "Aún no agregas productos."));
+    $("resumen").replaceChildren(crear("p", "vacio", "Tu canasta está vacía."));
   } else {
-    $("resumen").replaceChildren(...lineasPedido(t));
+    $("resumen").replaceChildren(...lineasPedido(t).map((l, i) => {
+      const p = t.items[i];
+      const quitar = conIcono(crear("button", "quitar"), "basura");
+      quitar.type = "button";
+      quitar.setAttribute("aria-label", "Quitar " + p.nombre + " de la canasta");
+      quitar.title = "Quitar";
+      quitar.onclick = () => cambiar(p.id, -99);
+      l.classList.add("item");
+      l.append(quitar);
+      return l;
+    }));
   }
+  $("vaciar").hidden = t.items.length === 0;
   $("subtotal").textContent = pesos(t.subtotal);
   $("tarifa").textContent = pesos(CONFIG.tarifa);
   $("total").textContent = pesos(t.total);
   const abierto = $("pedido").classList.contains("abierto");
-  $("cabezaTotal").textContent = t.unidades ? "Total " + pesos(t.total) : "Tu pedido";
+  $("cabezaTotal").textContent = t.unidades ? pesos(t.total) : "Canasta";
   $("cabezaItems").textContent = t.unidades
-    ? t.unidades + (t.unidades === 1 ? " producto" : " productos") + " · " + (abierto ? "ocultar ▾" : "ver detalle ▴")
-    : "Aún no agregas productos";
+    ? t.unidades + (t.unidades === 1 ? " producto " : " productos ") + (abierto ? "▾" : "▴")
+    : "Vacía";
+  $("cabezaCuenta").hidden = t.unidades === 0;
+  $("cabezaCuenta").textContent = String(t.unidades);
+  $("pedidoCabeza").setAttribute("aria-label", t.unidades
+    ? "Canasta: " + t.unidades + " productos, total " + pesos(t.total) + ". " + (abierto ? "Ocultar detalle" : "Ver detalle")
+    : "Canasta vacía");
   if (t.unidades) $("error1").textContent = "";
 }
+$("cabezaIcono").prepend(icono("canasta"));
+conIcono($("vaciar"), "basura", "Vaciar");
+$("vaciar").setAttribute("aria-label", "Vaciar la canasta");
+$("vaciar").onclick = () => {
+  if (!confirm("¿Vaciar toda la canasta?")) return;
+  carrito = {};
+  pintarLista(); pintarOfertas(); pintarResumen(); guardar();
+};
+$("irDatos").append(icono("flecha"));
+conIcono($("tabProductos"), "bolsa", "Productos");
+conIcono($("tabServicios"), "llave", "Servicios");
 
 $("pedidoCabeza").onclick = () => {
   const abierto = $("pedido").classList.toggle("abierto");
@@ -1415,7 +1529,7 @@ $("rut").addEventListener("blur", () => { if (rutValido($("rut").value)) $("rut"
 
 function pintarCuenta() {
   aplicarPerfil();
-  $("btnCuenta").textContent = sesion ? "⚙ Ajustes" : "Entrar";
+  conIcono($("btnCuenta"), sesion ? "ajustes" : "persona", sesion ? "Mi cuenta" : "Iniciar sesión");
   $("btnCuenta").setAttribute("aria-label", sesion ? "Ajustes de tu cuenta" : "Entrar a tu cuenta");
   $("cuentaDentro").hidden = !sesion;
   $("cuentaCodigo").hidden = Boolean(sesion) || !esperaCodigo;
@@ -1668,7 +1782,11 @@ async function iniciar() {
   $("avisoConfig").hidden = Boolean(CONFIG.whatsapp.replace(/\D/g, ""));
   $("edificio").append(new Option("Elige…", ""), ...CONFIG.edificios.map((n) => new Option(n, n)));
   $("sEdificio").append(new Option("Elige…", ""), ...CONFIG.edificios.map((n) => new Option(n, n)));
-  $("buscar").addEventListener("input", pintarLista);
+  $("buscar").addEventListener("input", () => {
+    if (vista !== "productos") mostrarVista("productos");
+    if (paso !== 1) irPaso(1);
+    pintarLista();
+  });
   // Nombre, edificio y depto se comparten entre Productos y Servicios.
   GEMELOS.forEach(([a, b]) => {
     $(a).addEventListener("change", () => { $(b).value = $(a).value; guardar(); });
