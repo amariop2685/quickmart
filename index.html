@@ -300,6 +300,40 @@
   .oferta .cantidad button { min-width: 40px; height: 40px; }
   .carrusel { gap: 14px; padding-top: 4px; margin-top: 0; }
   .producto { border-color: var(--borde); }
+  /* Bandera redonda del país de origen (dibujada con colores, sin imágenes externas). */
+  .bandera {
+    position: absolute; top: 6px; z-index: 1; width: 28px; height: 28px; border-radius: 50%; overflow: hidden;
+    border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.28); background: #ddd center / cover no-repeat;
+  }
+  .bandera.izq { left: 6px; } .bandera.der { right: 6px; }
+  .bandera.baja { top: 30px; }
+  .bandera.chica { position: static; display: inline-block; width: 16px; height: 16px; border-width: 1px; vertical-align: -3px; margin-left: 6px; }
+  .bandera.cl { background: linear-gradient(#0039a6, #0039a6) top left / 40% 50% no-repeat, linear-gradient(#fff 50%, #d52b1e 50%); }
+  .bandera.cl::after { content: "★"; position: absolute; left: 8%; top: 4%; width: 36%; text-align: center; color: #fff; font-size: 9px; line-height: 13px; }
+  .bandera.chica.cl::after { content: none; }
+  .bandera.pe { background: linear-gradient(90deg, #d91023 33.3%, #fff 33.3% 66.6%, #d91023 66.6%); }
+  .bandera.co { background: linear-gradient(#fcd116 50%, #003893 50% 75%, #ce1126 75%); }
+  .bandera.ve { background: radial-gradient(circle at 50% 62%, transparent 17%, #fff 18% 23%, transparent 24%) center / 100% 100% no-repeat,
+                            linear-gradient(#ffcc00 33.3%, #00247d 33.3% 66.6%, #cf142b 66.6%); }
+  .bandera.ar { background: radial-gradient(circle, #f6b40e 12%, transparent 13%), linear-gradient(#74acdf 33.3%, #fff 33.3% 66.6%, #74acdf 66.6%); }
+  .bandera.bo { background: linear-gradient(#d52b1e 33.3%, #f9e300 33.3% 66.6%, #007934 66.6%); }
+  .bandera.ec { background: radial-gradient(circle, #8a6d3b 10%, transparent 11%), linear-gradient(#ffdd00 50%, #034ea2 50% 75%, #ed1c24 75%); }
+  .bandera.br { background: radial-gradient(circle, #002776 24%, #ffdf00 25% 46%, #009b3a 47%); }
+  .bandera.mx { background: radial-gradient(circle, #8a6d3b 9%, transparent 10%), linear-gradient(90deg, #006847 33.3%, #fff 33.3% 66.6%, #ce1126 66.6%); }
+  .bandera.us { background: linear-gradient(#3c3b6e, #3c3b6e) top left / 46% 54% no-repeat,
+                            repeating-linear-gradient(#b22234 0 7.7%, #fff 7.7% 15.4%); }
+  .bandera.uy { background: radial-gradient(circle at 22% 26%, #fcd116 11%, transparent 12%),
+                            linear-gradient(#fff, #fff) top left / 44% 52% no-repeat,
+                            repeating-linear-gradient(#fff 0 11.1%, #0038a8 11.1% 22.2%); }
+  .bandera.py { background: linear-gradient(#d52b1e 33.3%, #fff 33.3% 66.6%, #0038a8 66.6%); }
+  .bandera.it { background: linear-gradient(90deg, #009246 33.3%, #fff 33.3% 66.6%, #ce2b37 66.6%); }
+  .bandera.fr { background: linear-gradient(90deg, #0055a4 33.3%, #fff 33.3% 66.6%, #ef4135 66.6%); }
+  .bandera.de { background: linear-gradient(#000 33.3%, #dd0000 33.3% 66.6%, #ffce00 66.6%); }
+  .bandera.cn { background: #de2910; }
+  .bandera.cn::after { content: "★"; position: absolute; left: 14%; top: 8%; color: #ffde00; font-size: 12px; line-height: 14px; }
+  .bandera.chica.cn::after { content: none; }
+  .bandera.jp { background: radial-gradient(circle, #bc002d 30%, #fff 31%); }
+  .bandera.es { background: linear-gradient(#aa151b 25%, #f1bf00 25% 75%, #aa151b 75%); }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -722,6 +756,21 @@ function foto(p) {
 }
 
 const COLORES_ETIQUETA = ["rojo", "azul", "verde", "naranja"];
+const PAISES = { cl: "Chile", pe: "Perú", co: "Colombia", ve: "Venezuela", ar: "Argentina", bo: "Bolivia", ec: "Ecuador", br: "Brasil", mx: "México", es: "España", us: "Estados Unidos", uy: "Uruguay", py: "Paraguay", it: "Italia", fr: "Francia", de: "Alemania", cn: "China", jp: "Japón" };
+// Bandera redonda del país de origen; "chica" va junto al nombre, la normal sobre la foto.
+function banderaDe(p, chica) {
+  const propia = p.pais === "otra" && p.paisImagen;   // bandera subida desde la administración
+  if (!PAISES[p.pais] && !propia) return null;
+  const pais = propia ? (p.paisNombre || "otro país") : PAISES[p.pais];
+  const lado = p.paisLado === "izq" ? "izq" : "der";
+  const tapada = (Array.isArray(p.etiquetas) ? p.etiquetas : []).some((e) => e && e.texto && (e.lado === "der" ? "der" : "izq") === lado);
+  const b = crear("span", "bandera " + (propia ? "otra" : p.pais) + (chica ? " chica" : " " + lado + (tapada ? " baja" : "")));
+  b.setAttribute("role", "img");
+  if (propia) b.style.backgroundImage = 'url("' + encodeURI(p.paisImagen) + '")';
+  b.setAttribute("aria-label", "Producto de " + pais);
+  b.title = "Producto de " + pais;
+  return b;
+}
 function etiquetasDe(p) {
   return (Array.isArray(p.etiquetas) ? p.etiquetas : []).filter((e) => e && e.texto).slice(0, 2).map((e) => crear("span",
     "etiqueta " + (e.lado === "der" ? "der" : "izq") + " " + (COLORES_ETIQUETA.includes(e.color) ? e.color : "rojo"),
@@ -737,7 +786,10 @@ function filaProducto(p) {
   const formato = porMedida(p)
     ? [p.formato, "Pide de a " + textoCantidad(p, 1)].filter(Boolean).join(" · ") : p.formato;
   const precio = crear("div", "precio", pesos(p.precio) + medidaDe(p));
-  datos.append(crear("div", "nombre", p.nombre), crear("div", "formato", formato), precio);
+  const nombre = crear("div", "nombre", p.nombre);
+  const chica = banderaDe(p, true);
+  if (chica) nombre.append(chica);
+  datos.append(nombre, crear("div", "formato", formato), precio);
   const antes = Number(p.antes) || 0;
   if (antes > p.precio) {   // rebaja: precio anterior tachado y cuánto se ahorra
     precio.append(crear("span", "antes", pesos(antes)));
@@ -763,6 +815,8 @@ function tarjetaProducto(p, normal) {
   const control = crear("div", "control");
   control.append(controlCantidad(p));
   t.append(control, ...etiquetasDe(p));
+  const bandera = banderaDe(p, false);
+  if (bandera) t.append(bandera);
   return t;
 }
 

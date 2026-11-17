@@ -223,6 +223,14 @@
       <label>Etiqueta 2 <small>Arriba a la derecha. Ej.: 2x1</small><input id="pEt2" maxlength="18"></label>
       <label>Color <select id="pEt2Color"><option value="rojo">Rojo</option><option value="azul">Azul marino</option><option value="verde">Verde</option><option value="naranja">Naranja</option></select></label>
     </div>
+    <div class="dos">
+      <label>País de origen <small>Muestra una bandera redonda sobre la foto.</small><select id="pPais"><option value="">Sin bandera</option><option value="cl">Chile</option><option value="pe">Perú</option><option value="co">Colombia</option><option value="ve">Venezuela</option><option value="ar">Argentina</option><option value="bo">Bolivia</option><option value="ec">Ecuador</option><option value="br">Brasil</option><option value="mx">México</option><option value="es">España</option><option value="us">Estados Unidos</option><option value="uy">Uruguay</option><option value="py">Paraguay</option><option value="it">Italia</option><option value="fr">Francia</option><option value="de">Alemania</option><option value="cn">China</option><option value="jp">Japón</option><option value="otra">Otra: subir imagen de la bandera</option></select></label>
+      <label>Posición de la bandera <select id="pPaisLado"><option value="der">Arriba a la derecha</option><option value="izq">Arriba a la izquierda</option></select></label>
+    </div>
+    <div class="dos" id="pPaisOtra" hidden>
+      <label>Nombre del país <input id="pPaisNombre" maxlength="30"></label>
+      <label>Imagen de la bandera <small id="pPaisActual"></small><input id="pPaisFoto" type="file" accept="image/*"></label>
+    </div>
     <label>Categoría <input id="pCat" list="categorias"><datalist id="categorias"></datalist></label>
     <label>Imagen <small>Opcional. Se achica sola para que cargue rápido.</small>
       <div class="fotoFila">
@@ -465,6 +473,13 @@ function abrirProducto(p) {
   $("pPrecio").value = p ? p.precio : "";
   $("pCat").value = p ? p.cat || "" : "";
   $("pAntes").value = p && p.antes ? p.antes : "";
+  $("pPais").value = p && p.pais ? p.pais : "";
+  if ($("pPais").value !== (p && p.pais ? p.pais : "")) $("pPais").value = "";
+  $("pPaisLado").value = p && p.paisLado === "izq" ? "izq" : "der";
+  $("pPaisNombre").value = p && p.paisNombre ? p.paisNombre : "";
+  $("pPaisFoto").value = "";
+  $("pPaisActual").textContent = p && p.paisImagen ? "Ya hay una imagen; elige otra solo si quieres cambiarla." : "";
+  $("pPaisOtra").hidden = $("pPais").value !== "otra";
   const ets = (p && Array.isArray(p.etiquetas) ? p.etiquetas : []);
   [1, 2].forEach((i) => {
     const e = ets.find((x) => x.lado === (i === 1 ? "izq" : "der")) || {};
@@ -496,6 +511,7 @@ function pintarVenta(pasoActual) {
   $("pPaso").value = String(elegido);
 }
 $("pVenta").onchange = () => pintarVenta(0);
+$("pPais").onchange = () => { $("pPaisOtra").hidden = $("pPais").value !== "otra"; };
 
 $("pFoto").onchange = () => {
   fotoNueva = $("pFoto").files[0] || null;
@@ -539,6 +555,17 @@ $("formProducto").addEventListener("submit", async (e) => {
   $("pError").textContent = error;
   if (error) return;
 
+  // bandera propia ("Otra"): necesita nombre e imagen
+  let paisImagen = editando && editando.paisImagen ? editando.paisImagen : "";
+  if ($("pPais").value === "otra") {
+    const archivo = $("pPaisFoto").files[0];
+    if (!$("pPaisNombre").value.trim()) { $("pError").textContent = "Escribe el nombre del país."; return; }
+    if (!archivo && !paisImagen) { $("pError").textContent = "Elige la imagen de la bandera."; return; }
+    if (archivo) {
+      try { paisImagen = await subirFoto(archivo, "bandera-" + $("pPaisNombre").value, 160); }
+      catch (err) { $("pError").textContent = "No se pudo subir la bandera: " + err.message; return; }
+    }
+  }
   let imagen = fotoActual;
   if (fotoNueva) {
     try { imagen = await subirFoto(fotoNueva, nombre); }
@@ -550,6 +577,10 @@ $("formProducto").addEventListener("submit", async (e) => {
   p.precio = Math.round(precio);
   p.cat = $("pCat").value.trim() || "Otros";
   if (antes > precio) p.antes = antes; else delete p.antes;
+  if ($("pPais").value) { p.pais = $("pPais").value; p.paisLado = $("pPaisLado").value; }
+  else { delete p.pais; delete p.paisLado; }
+  if (p.pais === "otra") { p.paisNombre = $("pPaisNombre").value.trim().slice(0, 30); p.paisImagen = paisImagen; }
+  else { delete p.paisNombre; delete p.paisImagen; }
   const etiquetas = [1, 2].map((i) => ({ texto: $("pEt" + i).value.trim().slice(0, 18), color: $("pEt" + i + "Color").value, lado: i === 1 ? "izq" : "der" }))
     .filter((e) => e.texto);
   if (etiquetas.length) p.etiquetas = etiquetas; else delete p.etiquetas;
