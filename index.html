@@ -15,11 +15,11 @@
 <style>
   :root {
     /* Colores de la marca QuickMart: rojo para las acciones, azul marino para el texto */
-    --fondo: #f4f5f9;
+    --fondo: #ffffff;
     --tarjeta: #ffffff;
     --texto: #0b1a4a;
     --suave: #5b6482;
-    --borde: #dfe2ec;
+    --borde: #e7e9f0;
     --verde: #d90b16;
     --verde-osc: #b00812;
     --verde-claro: #eef0f8;
@@ -275,6 +275,31 @@
   details.ajuste[open] > summary::after { content: "▴"; }
   details.ajuste > .dentro { padding: 0 14px 14px; }
   details.ajuste form { margin-top: 0; }
+  /* Tarjetas de producto limpias, estilo supermercado en línea: sin recuadro, todo sobre blanco,
+     foto grande, precio primero y botón de ancho completo. */
+  .oferta, .oferta.normal {
+    flex-basis: 158px; padding: 0 0 12px; gap: 2px; border: 0; border-radius: 0; background: #fff;
+    border-bottom: 1px solid var(--borde);
+  }
+  .oferta .foto, .producto .foto { background: #fff; }
+  .oferta .foto { order: 0; height: 132px; border-radius: 0; margin-bottom: 8px; }
+  .oferta div.foto, .producto div.foto { color: #cdd2e0; background: #fafbfd; border-radius: 10px; }
+  .oferta .precio { order: 1; font-size: 1.15rem; line-height: 1.2; }
+  .oferta .ahorra { order: 2; margin-top: 2px; }
+  .oferta .marca { order: 3; font-size: .78rem; font-weight: 400; text-transform: none; letter-spacing: 0; min-height: 1.2em; margin-top: 8px; }
+  .oferta .nombre {
+    order: 4; font-size: .92rem; font-weight: 400; line-height: 1.25; min-height: 2.5em;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .oferta .formato { order: 5; min-height: 1.2em; }
+  .oferta .control { order: 6; padding-top: 8px; }
+  .oferta .etiqueta { top: 0; left: 0; right: auto; }
+  .oferta .etiqueta.der { left: auto; right: 0; }
+  .agregar, .cantidad button { border-radius: 10px; }
+  .oferta .agregar { height: 40px; font-weight: 600; }
+  .oferta .cantidad button { min-width: 40px; height: 40px; }
+  .carrusel { gap: 14px; padding-top: 4px; margin-top: 0; }
+  .producto { border-color: var(--borde); }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -731,7 +756,7 @@ function tarjetaProducto(p, normal) {
   const antes = Number(p.antes) || 0;
   if (antes > p.precio) precio.append(crear("span", "antes", pesos(antes)));
   t.append(foto(p));
-  if (p.marca) t.append(crear("div", "marca", p.marca));
+  t.append(crear("div", "marca", p.marca || ""));
   const formato = porMedida(p) ? "De a " + textoCantidad(p, 1) : p.formato;
   t.append(crear("div", "nombre", p.nombre), crear("div", "formato", formato || ""), precio);
   if (antes > p.precio) t.append(crear("div", "ahorra", "Ahorra " + pesos(antes - p.precio)));
