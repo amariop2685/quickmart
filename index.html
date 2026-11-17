@@ -363,6 +363,14 @@
     .oferta .foto { height: 150px; }
   }
 
+  /* Carrusel rodando con el mouse: sin "imanes" para que el movimiento sea continuo,
+     y los extremos se desvanecen para indicar hacia dónde hay más productos. */
+  .carrusel.rodando { scroll-snap-type: none; scroll-behavior: auto; }
+  @media (hover: hover) {
+    .carrusel.haciaIzq { cursor: w-resize; -webkit-mask-image: linear-gradient(90deg, rgba(0,0,0,.25), #000 90px); mask-image: linear-gradient(90deg, rgba(0,0,0,.25), #000 90px); }
+    .carrusel.haciaDer { cursor: e-resize; -webkit-mask-image: linear-gradient(270deg, rgba(0,0,0,.25), #000 90px); mask-image: linear-gradient(270deg, rgba(0,0,0,.25), #000 90px); }
+  }
+
   /* Canasta */
   .pedido .cabeza { display: flex; align-items: center; gap: 12px; }
   .pedido .cabeza .canasta { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--verde-claro); }
@@ -427,12 +435,7 @@
   <div class="tienda" id="paso1">
     <div>
       <section class="ofertas" id="ofertas" aria-label="Ofertas" hidden>
-        <h2><span id="ofertasTitulo">Ofertas</span>
-          <span class="flechas">
-            <button type="button" id="ofertaAntes" aria-label="Ofertas anteriores">‹</button>
-            <button type="button" id="ofertaSigue" aria-label="Más ofertas">›</button>
-          </span>
-        </h2>
+        <h2><span id="ofertasTitulo">Ofertas</span></h2>
         <div class="carrusel" id="carrusel"></div>
       </section>
       <div class="filtros" id="filtros"></div>
@@ -918,6 +921,38 @@ function moverCarrusel(c, sentido) {
   const destino = sentido > 0 ? laminas.find((x) => x > aqui + 4) : [...laminas].reverse().find((x) => x < aqui - 4);
   c.scrollTo({ left: destino === undefined ? (sentido > 0 ? c.scrollWidth : 0) : destino });
 }
+// Con mouse: al acercar el cursor a un extremo del carrusel, este rueda hacia ese lado;
+// mientras más cerca del borde, más rápido. En pantallas táctiles se desliza con el dedo.
+let rodando = null;   // { c, velocidad }
+function rodar() {
+  if (!rodando) return;
+  const { c, velocidad } = rodando;
+  if (velocidad) c.scrollLeft += velocidad;
+  requestAnimationFrame(rodar);
+}
+function pararRodar() {
+  if (!rodando) return;
+  rodando.c.classList.remove("rodando", "haciaIzq", "haciaDer");
+  rodando = null;
+}
+document.addEventListener("mousemove", (e) => {
+  const c = e.target.closest ? e.target.closest(".carrusel") : null;
+  if (!c || c.scrollWidth <= c.clientWidth + 4) { pararRodar(); return; }
+  const r = c.getBoundingClientRect();
+  const zona = Math.min(140, r.width * 0.22);            // ancho de cada extremo sensible
+  const x = e.clientX - r.left;
+  let velocidad = 0;
+  if (x < zona) velocidad = -Math.ceil(14 * (1 - x / zona));
+  else if (x > r.width - zona) velocidad = Math.ceil(14 * (1 - (r.width - x) / zona));
+  if (rodando && rodando.c !== c) pararRodar();
+  if (!rodando) { rodando = { c, velocidad }; c.classList.add("rodando"); requestAnimationFrame(rodar); }
+  rodando.velocidad = velocidad;
+  c.classList.toggle("haciaIzq", velocidad < 0);
+  c.classList.toggle("haciaDer", velocidad > 0);
+  if (c.id === "carrusel") pausaOfertas = Date.now() + 10000;   // no pelea con el avance automático
+});
+document.documentElement.addEventListener("mouseleave", pararRodar);
+
 function flecha(texto, etiqueta, alTocar) {
   const b = crear("button", "", texto);
   b.type = "button";
@@ -955,10 +990,6 @@ function pintarLista() {
       ver.className = "verTodo";
       flechas.append(ver);
     }
-    if (productos.length > 2) {
-      flechas.append(flecha("‹", "Anteriores de " + cat, () => moverCarrusel(c, -1)),
-                     flecha("›", "Siguientes de " + cat, () => moverCarrusel(c, 1)));
-    }
     h.append(nombre, flechas);
     seccion.append(h, c);
     return seccion;
@@ -994,7 +1025,6 @@ function pintarOfertas() {
   $("carrusel").replaceChildren(...laminas, ...ofertas.map((p) => {
     return tarjetaProducto(p, false);
   }));
-  $("ofertaAntes").parentElement.hidden = ofertas.length + banners.length < 2;
 }
 
 // Avanza sola cada 4 segundos; se detiene un rato si el cliente la toca.
@@ -1002,8 +1032,6 @@ let pausaOfertas = 0;
 function moverOfertas(sentido) { moverCarrusel($("carrusel"), sentido); }
 ["pointerdown", "touchstart", "wheel", "focusin"].forEach((ev) =>
   $("ofertas").addEventListener(ev, () => { pausaOfertas = Date.now() + 10000; }, { passive: true }));
-$("ofertaAntes").onclick = () => moverOfertas(-1);
-$("ofertaSigue").onclick = () => moverOfertas(1);
 setInterval(() => {
   const c = $("carrusel");
   if (document.hidden || Date.now() < pausaOfertas || c.offsetParent === null || c.scrollWidth <= c.clientWidth + 4) return;
