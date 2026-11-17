@@ -371,6 +371,26 @@
     .carrusel.haciaDer { cursor: e-resize; -webkit-mask-image: linear-gradient(270deg, rgba(0,0,0,.25), #000 90px); mask-image: linear-gradient(270deg, rgba(0,0,0,.25), #000 90px); }
   }
 
+  /* Cabecera y pestañas siempre a la vista al bajar por la página. */
+  header { position: sticky; top: 0; z-index: 4; }
+  .pestanas {
+    position: sticky; top: var(--alto-cabecera, 0px); z-index: 3; background: #fff;
+    margin: 0 -16px; padding: 10px 16px; box-shadow: 0 6px 10px -8px rgba(11, 26, 74, .25);
+  }
+  .paso, #filtros, #ofertas, #vistaCuenta, #vistaServicios, .categoria, .error { scroll-margin-top: calc(var(--alto-cabecera, 0px) + 76px); }
+  @media (min-width: 900px) { .pestanas { margin: 0 -24px; padding: 10px 24px; } }
+  @media (max-width: 899px) {
+    header { padding: 8px 0 10px; }
+    header h1 img { max-width: 140px; }
+    .btnCuenta { padding: 7px 12px; }
+    .buscador { margin-top: 8px; }
+    .buscador input { height: 46px; }
+    .pasos { margin-top: 8px; }
+    .pasos button { padding: 6px 4px; }
+    .pestanas { padding: 8px 16px; }
+    .pestanas button { padding: 9px; }
+  }
+
   /* Canasta */
   .pedido .cabeza { display: flex; align-items: center; gap: 12px; }
   .pedido .cabeza .canasta { position: relative; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--verde-claro); }
@@ -1783,6 +1803,14 @@ if (ES_IOS && !YA_INSTALADA && !instalarCerrado()) {
   $("instalarBoton").hidden = true;
   $("instalar").hidden = false;
 }
+
+// Las pestañas quedan pegadas justo debajo de la cabecera, mida lo que mida.
+function medirCabecera() {
+  document.documentElement.style.setProperty("--alto-cabecera", document.querySelector("header").offsetHeight + "px");
+}
+medirCabecera();
+if ("ResizeObserver" in window) new ResizeObserver(medirCabecera).observe(document.querySelector("header"));
+window.addEventListener("resize", medirCabecera);
 
 // --- inicio ---
 const GEMELOS = [["nombre", "sNombre"], ["depto", "sDepto"], ["edificio", "sEdificio"]];
