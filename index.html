@@ -1646,6 +1646,7 @@ function prepararTurnstile() {
     widgetTurnstile = window.turnstile.render("#verificacion", {
       sitekey: TURNSTILE.sitio,
       appearance: "interaction-only",   // solo se ve si Cloudflare necesita que el cliente toque algo
+      theme: "light",                   // claro, como el resto de la página
       size: "flexible",
       callback: (t) => { tokenTurnstile = t; $("error3").textContent = ""; },
       "expired-callback": () => { tokenTurnstile = ""; },
