@@ -1597,11 +1597,19 @@ $("comprobante").addEventListener("change", async () => {
 });
 
 // --- envío ---
+// Código corto del pedido: aparece en el WhatsApp y en la administración para reconocerlo.
+let codigoPedido = "";
+function nuevoCodigo() {
+  const letras = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   // sin O/0 ni I/1, que se confunden
+  const azar = crypto.getRandomValues(new Uint8Array(6));
+  return [...azar].map((x) => letras[x % letras.length]).join("");
+}
+
 function armarMensaje() {
   const t = totales();
   const otros = $("otros").value.trim();
   const lineas = [
-    "Pedido — " + $("edificio").value + ", depto " + $("depto").value.trim(),
+    "Pedido" + (codigoPedido ? " " + codigoPedido : "") + " — " + $("edificio").value + ", depto " + $("depto").value.trim(),
     "Nombre: " + nombreCompleto(),
     "",
     ...t.items.map((p) => "• " + textoLinea(p, p.n) + " — " + pesos(importe(p, p.n))),
@@ -1624,6 +1632,7 @@ $("enviar").onclick = () => {
   $("error3").textContent = error;
   if (error) return;
   guardar();
+  codigoPedido = nuevoCodigo();
   const mensaje = armarMensaje();
   const numero = CONFIG.whatsapp.replace(/\D/g, "");
   if (!numero) {
@@ -1979,18 +1988,29 @@ $("btnCuenta").onclick = () => { ubicarCuenta(false); mostrarVista("cuenta"); pi
 $("cVolver").onclick = () => mostrarVista("productos");
 
 // Guarda el pedido en el historial del cliente. Nunca impide enviar el pedido.
+// Guarda el pedido (con o sin cuenta) para que aparezca en la administración. Nunca impide enviarlo.
 async function guardarPedido() {
-  if (!nube || !sesion) return;
-  guardarPerfil();
+  if (!nube) return;
+  if (sesion) guardarPerfil();
   const t = totales();
   const fila = {
     nombre: nombreCompleto().slice(0, 80), edificio: $("edificio").value.slice(0, 80),
     depto: $("depto").value.trim().slice(0, 20), pago: pagoTexto(), otros: $("otros").value.trim().slice(0, 500),
-    items: t.items.map((p) => ({ id: p.id, nombre: titulo(p), formato: p.formato, precio: precioDe(p), n: p.n, texto: textoLinea(p, p.n) })),
+    items: t.items.map((p) => ({ id: p.id, nombre: titulo(p), formato: p.formato, precio: precioDe(p), n: p.n,
+      cantidad: cantidadDe(p, p.n), texto: textoLinea(p, p.n) })),
     subtotal: t.subtotal, despacho: CONFIG.tarifa, total: t.total,
+    codigo: codigoPedido, comprobante: conComprobante() ? comprobanteUrl.slice(0, 300) : null,
   };
   try {
-    await Promise.race([nube.from("pedidos").insert(fila), new Promise((r) => setTimeout(r, 4000))]);
+    const guardarFila = async () => {
+      const r = await nube.from("pedidos").insert(fila);
+      // si la tabla aún no tiene las columnas nuevas (falta correr el SQL), guarda sin ellas
+      if (r.error && /codigo|comprobante|column/i.test(r.error.message || "")) {
+        delete fila.codigo; delete fila.comprobante;
+        await nube.from("pedidos").insert(fila);
+      }
+    };
+    await Promise.race([guardarFila(), new Promise((r) => setTimeout(r, 4000))]);
   } catch (e) { /* el pedido se envía igual */ }
 }
 
@@ -2003,7 +2023,7 @@ async function pintarHistorial() {
     const caja = crear("div", "caja pedidoViejo");
     const cuando = crear("div", "cuando");
     const fecha = new Date(ped.creado).toLocaleDateString("es-CL", { day: "numeric", month: "long", year: "numeric" });
-    cuando.append(crear("span", "", fecha), crear("span", "", pesos(Number(ped.total) || 0)));
+    cuando.append(crear("span", "", fecha + (ped.estado && ped.estado !== "nuevo" ? " · " + ped.estado : "")), crear("span", "", pesos(Number(ped.total) || 0)));
     const items = Array.isArray(ped.items) ? ped.items : [];
     const que = items.map((i) => i.texto || i.n + " × " + i.nombre).join(", ") + (ped.otros ? (items.length ? ", " : "") + ped.otros : "");
     caja.append(cuando, crear("div", "que", que));

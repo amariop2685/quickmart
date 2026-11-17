@@ -23,8 +23,24 @@
   #estado { font-size: .9rem; font-weight: 600; color: var(--suave); min-width: 9em; text-align: right; }
   #estado.ok { color: var(--ok); } #estado.mal { color: var(--rojo); }
 
-  .pestanas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0; }
-  @media (max-width: 520px) { .pestanas { grid-template-columns: repeat(2, 1fr); } }
+  .pestanas { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 16px 0; }
+  @media (max-width: 620px) { .pestanas { grid-template-columns: repeat(3, 1fr); } }
+  /* Pedidos */
+  .filtroPedidos { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+  .filtroPedidos button { font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; border-radius: 999px; padding: 7px 12px;
+    background: #fff; color: var(--texto); border: 1px solid var(--borde); }
+  .filtroPedidos button[aria-pressed="true"] { background: var(--texto); border-color: var(--texto); color: #fff; }
+  .pedidoAdm { background: var(--tarjeta); border: 1px solid var(--borde); border-left: 5px solid #8a93ad; border-radius: 12px; padding: 12px 14px; display: grid; gap: 6px; }
+  .pedidoAdm.nuevo { border-left-color: #d90b16; } .pedidoAdm.en-camino { border-left-color: #c2570a; }
+  .pedidoAdm.entregado { border-left-color: #17803d; } .pedidoAdm.cancelado { border-left-color: #b8bdcc; opacity: .75; }
+  .pedidoAdm .cabezaPed { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .pedidoAdm .cabezaPed b { font-size: 1.02rem; }
+  .pedidoAdm .cabezaPed select { width: auto; font-weight: 600; }
+  .pedidoAdm ul { margin: 0; padding-left: 18px; }
+  .pedidoAdm .meta { color: var(--suave); font-size: .9rem; }
+  .pedidoAdm .total { font-weight: 700; }
+  .pedidoAdm .descontado { font-size: .85rem; color: #17663a; font-weight: 600; }
+  .accesoPedidos { display: grid; gap: 10px; max-width: 420px; }
   .item .banner { flex: none; width: 128px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--claro); }
   .item .campos { flex: 1; min-width: 180px; display: grid; gap: 6px; }
   .pestanas button { font: inherit; font-weight: 700; cursor: pointer; padding: 11px 6px;
@@ -176,6 +192,7 @@
 
 <main class="ancho" id="panel" hidden>
   <div class="pestanas" role="tablist">
+    <button type="button" role="tab" data-vista="pedidos" aria-selected="false">Pedidos</button>
     <button type="button" role="tab" data-vista="productos" aria-selected="true">Productos</button>
     <button type="button" role="tab" data-vista="servicios" aria-selected="false">Servicios</button>
     <button type="button" role="tab" data-vista="banners" aria-selected="false">Banners</button>
@@ -198,6 +215,29 @@
       <button class="principal" id="nuevoServicio" type="button">+ Agregar servicio</button>
     </div>
     <div class="lista" id="listaServicios"></div>
+  </section>
+
+  <section id="v-pedidos" hidden>
+    <div class="accesoPedidos caja" id="pedAcceso" hidden>
+      <b>Entra con tu cuenta de QuickMart para ver los pedidos</b>
+      <label>Correo <input id="pedCorreo" type="email" autocomplete="email"></label>
+      <label>Contraseña <small>Si no tienes, usa “Recibir código”.</small><input id="pedClave" type="password" autocomplete="current-password"></label>
+      <label id="pedCodigoCaja" hidden>Código del correo <input id="pedCodigo" inputmode="numeric" autocomplete="one-time-code"></label>
+      <p class="error" id="pedAccesoError" role="alert"></p>
+      <div class="botones" style="justify-content:flex-start">
+        <button class="principal" type="button" id="pedEntrar">Entrar</button>
+        <button class="secundario" type="button" id="pedPedirCodigo">Recibir código</button>
+      </div>
+    </div>
+    <p class="caja" id="pedNoAdmin" hidden></p>
+    <div id="pedPanel" hidden>
+      <div class="barra">
+        <div class="filtroPedidos" id="pedFiltros"></div>
+        <button class="secundario" type="button" id="pedRecargar">Actualizar</button>
+      </div>
+      <p class="cuenta" id="pedCuenta"></p>
+      <div class="lista" id="listaPedidos"></div>
+    </div>
   </section>
 
   <section id="v-banners" hidden>
@@ -586,7 +626,8 @@ document.querySelectorAll(".pestanas button").forEach((b) => {
   b.onclick = () => {
     document.querySelectorAll(".pestanas button").forEach((x) =>
       x.setAttribute("aria-selected", String(x === b)));
-    ["productos", "servicios", "banners", "negocio"].forEach((v) => { $("v-" + v).hidden = v !== b.dataset.vista; });
+    ["pedidos", "productos", "servicios", "banners", "negocio"].forEach((v) => { $("v-" + v).hidden = v !== b.dataset.vista; });
+    if (b.dataset.vista === "pedidos") abrirPedidos();
   };
 });
 document.querySelectorAll("[data-cerrar]").forEach((b) => { b.onclick = () => b.closest("dialog").close(); });
@@ -994,6 +1035,171 @@ $("formNegocio").addEventListener("submit", async (e) => {
 $("buscar").addEventListener("input", pintarProductos);
 $("nuevoProducto").onclick = () => abrirProducto(null);
 $("nuevoServicio").onclick = () => abrirServicio(null);
+
+
+// --- pedidos (Supabase): estado de cada pedido y descuento de stock al entregarlo ---
+const CUENTAS = { url: "https://rurxnvvfnbqrsvgapndr.supabase.co", clave: "sb_publishable_nsf17n-bNwxQ_FxwTBsKqw_j1m_0rOg" };
+const ESTADOS = ["nuevo", "en camino", "entregado", "cancelado"];
+const NOMBRE_ESTADO = { nuevo: "Nuevo", "en camino": "En camino", entregado: "Entregado", cancelado: "Cancelado" };
+let nube = null, esAdmin = false, filtroPed = "nuevo", pedidos = [];
+
+function cargarSupabase() {
+  if (window.supabase) return Promise.resolve();
+  return new Promise((ok, mal) => {
+    const sc = document.createElement("script");
+    sc.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+    sc.onload = ok; sc.onerror = () => mal(new Error("No se pudo cargar el servicio de pedidos."));
+    document.head.append(sc);
+  });
+}
+function verPedidos(cual) {
+  $("pedAcceso").hidden = cual !== "acceso";
+  $("pedNoAdmin").hidden = cual !== "noadmin";
+  $("pedPanel").hidden = cual !== "panel";
+}
+async function abrirPedidos() {
+  try {
+    await cargarSupabase();
+    if (!nube) nube = window.supabase.createClient(CUENTAS.url, CUENTAS.clave);
+    const { data } = await nube.auth.getSession();
+    if (!data.session) { verPedidos("acceso"); return; }
+    const r = await nube.rpc("es_admin");
+    esAdmin = r.data === true;
+    if (!esAdmin) {
+      $("pedNoAdmin").textContent = "La cuenta " + data.session.user.email + " no es administradora. " +
+        "Corre en Supabase el archivo supabase-pedidos-admin.sql con tu correo y vuelve a abrir esta pestaña.";
+      verPedidos("noadmin");
+      return;
+    }
+    verPedidos("panel");
+    await cargarPedidos();
+  } catch (e) {
+    $("pedNoAdmin").textContent = e.message || "No se pudieron cargar los pedidos.";
+    verPedidos("noadmin");
+  }
+}
+$("pedEntrar").onclick = async () => {
+  const correo = $("pedCorreo").value.trim().toLowerCase();
+  $("pedAccesoError").textContent = "";
+  if (!correo) { $("pedAccesoError").textContent = "Escribe tu correo."; return; }
+  let r;
+  if (!$("pedCodigoCaja").hidden && $("pedCodigo").value.trim()) {
+    r = await nube.auth.verifyOtp({ email: correo, token: $("pedCodigo").value.replace(/\D/g, ""), type: "email" });
+  } else {
+    if (!$("pedClave").value) { $("pedAccesoError").textContent = "Escribe tu contraseña o pide un código."; return; }
+    r = await nube.auth.signInWithPassword({ email: correo, password: $("pedClave").value });
+  }
+  if (r.error) { $("pedAccesoError").textContent = "No se pudo entrar: revisa el correo, la contraseña o el código."; return; }
+  abrirPedidos();
+};
+$("pedPedirCodigo").onclick = async () => {
+  const correo = $("pedCorreo").value.trim().toLowerCase();
+  if (!correo) { $("pedAccesoError").textContent = "Escribe tu correo."; return; }
+  const r = await nube.auth.signInWithOtp({ email: correo, options: { shouldCreateUser: false } });
+  if (r.error) { $("pedAccesoError").textContent = "No se pudo enviar el código. Espera un minuto y prueba de nuevo."; return; }
+  $("pedCodigoCaja").hidden = false;
+  $("pedAccesoError").textContent = "";
+  avisar("Te enviamos un código al correo", "ok");
+  $("pedCodigo").focus();
+};
+$("pedRecargar").onclick = () => cargarPedidos();
+
+async function cargarPedidos() {
+  $("listaPedidos").replaceChildren(crear("p", "vacio", "Cargando…"));
+  const { data, error } = await nube.from("pedidos").select("*").order("creado", { ascending: false }).limit(200);
+  if (error) { $("listaPedidos").replaceChildren(crear("p", "vacio", "No se pudieron cargar los pedidos.")); return; }
+  pedidos = data;
+  pintarPedidos();
+}
+function pintarPedidos() {
+  const cuenta = (e) => pedidos.filter((x) => e === "todos" || x.estado === e).length;
+  $("pedFiltros").replaceChildren(...["nuevo", "en camino", "entregado", "cancelado", "todos"].map((e) => {
+    const b = boton("", (e === "todos" ? "Todos" : NOMBRE_ESTADO[e]) + " (" + cuenta(e) + ")", () => { filtroPed = e; pintarPedidos(); });
+    b.setAttribute("aria-pressed", String(filtroPed === e));
+    return b;
+  }));
+  const lista = pedidos.filter((x) => filtroPed === "todos" || x.estado === filtroPed);
+  $("pedCuenta").textContent = "Al marcar un pedido como Entregado, se descuenta su stock. Si lo cambias de nuevo, se devuelve.";
+  if (!lista.length) { $("listaPedidos").replaceChildren(crear("p", "vacio", "No hay pedidos aquí.")); return; }
+  $("listaPedidos").replaceChildren(...lista.map((ped) => {
+    const c = crear("div", "pedidoAdm " + (ped.estado || "nuevo").replace(" ", "-"));
+    const cab = crear("div", "cabezaPed");
+    const fecha = new Date(ped.creado).toLocaleString("es-CL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    cab.append(crear("b", "", (ped.codigo ? "N° " + ped.codigo + " · " : "") + fecha));
+    const sel = crear("select");
+    sel.setAttribute("aria-label", "Estado del pedido " + (ped.codigo || ""));
+    sel.append(...ESTADOS.map((e) => new Option(NOMBRE_ESTADO[e], e)));
+    sel.value = ped.estado || "nuevo";
+    sel.onchange = async () => {
+      sel.disabled = true;
+      const ok = await cambiarEstado(ped, sel.value);
+      if (!ok) sel.value = ped.estado;
+      sel.disabled = false;
+      pintarPedidos();
+    };
+    cab.append(sel);
+    c.append(cab, crear("div", "meta", [ped.nombre, (ped.edificio || "") + (ped.depto ? ", depto " + ped.depto : ""), ped.pago].filter(Boolean).join(" · ")));
+    const ul = crear("ul");
+    (Array.isArray(ped.items) ? ped.items : []).forEach((i) => ul.append(crear("li", "", (i.texto || i.n + " × " + i.nombre) + " — " + pesos(Math.round((Number(i.precio) || 0) * cantidadItem(i))))));
+    if (ped.otros) ul.append(crear("li", "", "Otros: " + ped.otros));
+    c.append(ul, crear("div", "total", "Total " + pesos(ped.total)));
+    if (ped.comprobante && /^https:\/\/[a-z0-9]+\.supabase\.co\//.test(ped.comprobante)) {
+      const a = crear("a", "", "Ver comprobante");
+      a.href = ped.comprobante; a.target = "_blank"; a.rel = "noopener";
+      c.append(a);
+    }
+    if (ped.stock_descontado) c.append(crear("div", "descontado", "✓ Stock descontado"));
+    return c;
+  }));
+}
+
+// Cuánto descuenta un ítem del stock: unidades, o kilos/litros en productos por peso.
+function cantidadItem(i) {
+  if (Number(i.cantidad) > 0) return Number(i.cantidad);
+  const p = datos.productos.find((x) => x.id === i.id);
+  const paso = p && p.unidad && Number(p.paso) > 0 ? Number(p.paso) : 1;
+  return redondo((Number(i.n) || 0) * paso);
+}
+// Suma (signo +1) o resta (signo -1) del stock las cantidades del pedido. Devuelve cuántos productos cambió.
+function moverStock(ped, signo) {
+  let cambiados = 0;
+  (Array.isArray(ped.items) ? ped.items : []).forEach((i) => {
+    const p = datos.productos.find((x) => x.id === i.id);
+    if (!p || !conStock(p)) return;   // productos sin stock no se tocan
+    p.stock = Math.max(0, redondo(p.stock + signo * cantidadItem(i)));
+    cambiados++;
+  });
+  return cambiados;
+}
+
+// Cambia el estado. Entrar a "entregado" descuenta el stock; salir de "entregado" lo devuelve.
+// La marca stock_descontado se cambia primero y en una sola operación, para no descontar dos veces.
+async function cambiarEstado(ped, nuevo) {
+  const descontar = nuevo === "entregado" && !ped.stock_descontado;
+  const devolver = nuevo !== "entregado" && ped.stock_descontado;
+  let q = nube.from("pedidos").update({ estado: nuevo, stock_descontado: nuevo === "entregado" ? true : (devolver ? false : ped.stock_descontado) }).eq("id", ped.id);
+  if (descontar) q = q.eq("stock_descontado", false);
+  if (devolver) q = q.eq("stock_descontado", true);
+  const { data, error } = await q.select();
+  if (error) { avisar("No se pudo cambiar el estado", "mal"); return false; }
+  if (!data || !data.length) { avisar("El pedido cambió en otra pantalla. Actualizando…"); await cargarPedidos(); return false; }
+  const anterior = { estado: ped.estado, stock_descontado: ped.stock_descontado };
+  Object.assign(ped, data[0]);
+  if (!descontar && !devolver) { avisar("Pedido " + NOMBRE_ESTADO[nuevo].toLowerCase(), "ok"); return true; }
+
+  const cambiados = moverStock(ped, descontar ? -1 : 1);
+  if (cambiados === 0) { avisar("Pedido " + NOMBRE_ESTADO[nuevo].toLowerCase() + " (sus productos no llevan stock)", "ok"); return true; }
+  if (await guardar()) {
+    pintarProductos();
+    avisar((descontar ? "Entregado: se descontó el stock de " : "Se devolvió el stock de ") + cambiados + (cambiados === 1 ? " producto" : " productos"), "ok");
+    return true;
+  }
+  // no se pudo guardar el catálogo: se deshace todo para que stock y estado sigan cuadrando
+  moverStock(ped, descontar ? 1 : -1);
+  await nube.from("pedidos").update(anterior).eq("id", ped.id);
+  Object.assign(ped, anterior);
+  return false;
+}
 
 async function arrancar() {
   const c = await almacen.cargar();
