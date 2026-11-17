@@ -1248,7 +1248,10 @@ $("vaciar").onclick = async () => {
   });
   if (!si) return;
   carrito = {};
+  $("pedido").classList.remove("abierto");   // cierra la lista y vuelve a los productos
+  $("pedidoCabeza").setAttribute("aria-expanded", "false");
   pintarLista(); pintarOfertas(); pintarResumen(); guardar();
+  window.scrollTo({ top: 0, behavior: "smooth" });
   avisar("Canasta vacía");
 };
 $("irDatos").append(icono("flecha"));
