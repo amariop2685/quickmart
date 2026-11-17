@@ -437,6 +437,8 @@
   .dialogo .circulo svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .dialogo h3 { margin: 0 0 6px; font-size: 1.15rem; font-weight: 700; }
   .dialogo p { margin: 0; color: #5b6482; font-size: .95rem; font-weight: 400; }
+  .dialogo .destacado { font: 700 2.4rem/1.1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .25em; margin: 8px 0 10px; color: #0b1a4a; }
+  .dialogo .campoDialogo { width: 100%; margin-top: 14px; text-align: center; font: 700 1.6rem ui-monospace, Menlo, monospace; letter-spacing: .3em; padding: 10px; border: 2px solid #0b1a4a; border-radius: 12px; }
   .dialogo .botones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
   .dialogo .botones.uno { grid-template-columns: 1fr; }
   .dialogo .botones button {
@@ -475,6 +477,15 @@
   .oferta .otrosPrecios { order: 2; }
   .soloPago { color: #8a5600; font-size: .76rem; font-weight: 600; }
   .oferta .soloPago { order: 5; }
+  .trampa { position: absolute !important; left: -9999px !important; width: 1px; height: 1px; overflow: hidden; }
+  .misPines { display: grid; gap: 6px; margin: 12px 0 0; }
+  .misPines .pin {
+    display: flex; align-items: center; gap: 10px; background: #eef0f8; border-radius: 12px; padding: 8px 10px 8px 12px; font-size: .9rem;
+  }
+  .misPines .pin .ico { width: 20px; height: 20px; color: var(--texto); }
+  .misPines .pin b { font: 700 1.05rem ui-monospace, Menlo, monospace; letter-spacing: .15em; }
+  .misPines .pin span { flex: 1; min-width: 0; }
+  .misPines .pin button { font: inherit; cursor: pointer; background: none; border: 0; color: var(--suave); padding: 4px 6px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -507,6 +518,8 @@
       <button type="button" class="cerrar" id="instalarCerrar" aria-label="Cerrar">✕</button>
     </span>
   </div>
+
+  <div class="misPines" id="misPines" hidden></div>
 
   <div class="pestanas" id="pestanas" role="tablist">
     <button type="button" role="tab" id="tabProductos" aria-selected="true">Productos</button>
@@ -612,6 +625,7 @@
           </label>
         </div>
       </div>
+      <label class="trampa" aria-hidden="true">Sitio web <input id="sitioWeb" tabindex="-1" autocomplete="off"></label>
       <label>Forma de pago
         <select id="pago"></select>
       </label>
@@ -827,10 +841,11 @@ const DIBUJOS = {
   pregunta: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/>',
   basura: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
   alerta: '<path d="M12 3 2.5 20h19L12 3z"/><path d="M12 10v4M12 17h.01"/>',
+  candado: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
 };
 // Pregunta con dos botones. Devuelve una promesa: true si acepta, false si cancela (o pulsa Esc o fuera).
 function confirmar(opciones) {
-  const o = Object.assign({ titulo: "", texto: "", aceptar: "Aceptar", cancelar: "Cancelar", peligro: false, dibujo: "pregunta" }, opciones);
+  const o = Object.assign({ titulo: "", texto: "", destacado: "", campo: null, aceptar: "Aceptar", cancelar: "Cancelar", peligro: false, dibujo: "pregunta" }, opciones);
   return new Promise((resolver) => {
     const antes = document.activeElement;
     const capa = document.createElement("div");
@@ -847,7 +862,16 @@ function confirmar(opciones) {
     h.id = "dialogoTitulo";
     d.setAttribute("aria-labelledby", h.id);
     d.append(circulo, h);
+    if (o.destacado) { const g = document.createElement("div"); g.className = "destacado"; g.textContent = o.destacado; d.append(g); }
     if (o.texto) { const p = document.createElement("p"); p.textContent = o.texto; d.append(p); }
+    // campo opcional (por ejemplo, para escribir un PIN): al aceptar, la promesa entrega lo escrito
+    let entrada = null;
+    if (o.campo) {
+      entrada = document.createElement("input");
+      Object.assign(entrada, o.campo);
+      entrada.className = "campoDialogo";
+      d.append(entrada);
+    }
     const botones = document.createElement("div");
     botones.className = "botones" + (o.cancelar ? "" : " uno");
     const cerrar = (valor) => {
@@ -858,7 +882,7 @@ function confirmar(opciones) {
     };
     const si = document.createElement("button");
     si.type = "button"; si.className = "si"; si.textContent = o.aceptar;
-    si.onclick = () => cerrar(true);
+    si.onclick = () => cerrar(entrada ? entrada.value : true);
     let no = null;
     if (o.cancelar) {
       no = document.createElement("button");
@@ -872,16 +896,17 @@ function confirmar(opciones) {
     capa.addEventListener("mousedown", (e) => { if (e.target === capa) cerrar(false); });
     const teclas = (e) => {
       if (e.key === "Escape") { e.preventDefault(); cerrar(false); }
+      if (e.key === "Enter" && entrada && document.activeElement === entrada) { e.preventDefault(); cerrar(entrada.value); }
       if (e.key === "Tab") {   // el foco no sale del diálogo
         e.preventDefault();
-        const lista = [no, si].filter(Boolean);
+        const lista = [entrada, no, si].filter(Boolean);
         lista[(lista.indexOf(document.activeElement) + (e.shiftKey ? lista.length - 1 : 1)) % lista.length].focus();
       }
     };
     document.addEventListener("keydown", teclas, true);
     // si hay una ficha abierta (va en la capa superior del navegador), el diálogo se pone dentro para quedar encima
     (document.querySelector("dialog[open]") || document.body).append(capa);
-    (no || si).focus();
+    (entrada || no || si).focus();
   });
 }
 // Aviso breve que flota arriba y se va solo. tipo: "" | "ok" | "mal"
@@ -910,6 +935,7 @@ const ICONOS = {
   mas: '<path d="M12 5v14M5 12h14"/>',
   flecha: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   bolsa: '<path d="M6 8h12l1 12H5L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  candado: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   llave: '<path d="M14.5 6.5a4 4 0 0 0-5.3 5.3L3 18v3h3l6.2-6.2a4 4 0 0 0 5.3-5.3l-2.6 2.6-2.4-2.4 2-3.2z"/>',
 };
 function icono(nombre) {
@@ -1599,6 +1625,36 @@ $("comprobante").addEventListener("change", async () => {
 // --- envío ---
 // Código corto del pedido: aparece en el WhatsApp y en la administración para reconocerlo.
 let codigoPedido = "";
+let pinPedido = "";
+const nuevoPin = () => String(crypto.getRandomValues(new Uint32Array(1))[0] % 10000).padStart(4, "0");
+async function hashPin(codigo, pin) {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(codigo + ":" + pin));
+  return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+// PIN guardados en este celular (los últimos 5, por 7 días) para mostrárselos al cliente.
+const CLAVE_PINES = "quickmart-pines-v1";
+function leerPines() {
+  try {
+    const hace7 = Date.now() - 7 * 864e5;
+    return (JSON.parse(localStorage.getItem(CLAVE_PINES) || "[]") || []).filter((x) => x && x.fecha > hace7);
+  } catch (e) { return []; }
+}
+function guardarPines(lista) { try { localStorage.setItem(CLAVE_PINES, JSON.stringify(lista.slice(0, 5))); } catch (e) { /* ignorar */ } }
+function pintarPines() {
+  const lista = leerPines();
+  $("misPines").hidden = lista.length === 0;
+  $("misPines").replaceChildren(...lista.map((x) => {
+    const fila = crear("div", "pin");
+    const t = crear("span", "", "Pedido " + x.codigo + " · PIN de entrega ");
+    t.append(crear("b", "", x.pin));
+    const cerrar = crear("button", "", "✕");
+    cerrar.type = "button";
+    cerrar.setAttribute("aria-label", "Ocultar el PIN del pedido " + x.codigo);
+    cerrar.onclick = () => { guardarPines(leerPines().filter((y) => y.codigo !== x.codigo)); pintarPines(); };
+    fila.append(icono("candado"), t, cerrar);
+    return fila;
+  }));
+}
 function nuevoCodigo() {
   const letras = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   // sin O/0 ni I/1, que se confunden
   const azar = crypto.getRandomValues(new Uint8Array(6));
@@ -1627,26 +1683,40 @@ function armarMensaje() {
   return lineas.join("\n");
 }
 
-$("enviar").onclick = () => {
+$("enviar").onclick = async () => {
   const error = errorPaso1() || errorPaso2();
   $("error3").textContent = error;
   if (error) return;
   guardar();
+  // un bot llena el campo invisible: se le muestra que salió bien pero no se registra nada
+  if ($("sitioWeb").value) { avisar("Pedido enviado"); return; }
   codigoPedido = nuevoCodigo();
-  const mensaje = armarMensaje();
+  pinPedido = nube ? nuevoPin() : "";
+  const mensaje = armarMensaje();   // el PIN nunca va en el mensaje
   const numero = CONFIG.whatsapp.replace(/\D/g, "");
+  $("enviar").disabled = true;
+  const r = await guardarPedido();
+  $("enviar").disabled = false;
+  if (r.rechazo) {   // la base de datos lo rechazó (fuera de Chile o demasiados pedidos seguidos)
+    confirmar({ titulo: "No pudimos recibir tu pedido", texto: r.rechazo, aceptar: "Entendido", cancelar: "", peligro: true, dibujo: "alerta" });
+    return;
+  }
+  if (r.ok && pinPedido) {
+    guardarPines([{ codigo: codigoPedido, pin: pinPedido, fecha: Date.now() }, ...leerPines()]);
+    pintarPines();
+    await confirmar({
+      titulo: "Tu PIN de entrega", destacado: pinPedido,
+      texto: "Anótalo o toma una captura. Te lo pediremos al entregarte el pedido " + codigoPedido + ": así sabemos que llegó a la persona correcta.",
+      aceptar: numero ? "Ir a WhatsApp" : "Entendido", cancelar: "", dibujo: "candado",
+    });
+  }
   if (!numero) {
-    guardarPedido();
     $("mensaje").textContent = mensaje;
     $("vistaMensaje").hidden = false;
     $("vistaMensaje").scrollIntoView({ behavior: "smooth" });
     return;
   }
-  $("enviar").disabled = true;
-  guardarPedido().finally(() => {
-    $("enviar").disabled = false;
-    window.location.href = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensaje);
-  });
+  window.location.href = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensaje);
 };
 
 // --- servicios ---
@@ -1989,8 +2059,9 @@ $("cVolver").onclick = () => mostrarVista("productos");
 
 // Guarda el pedido en el historial del cliente. Nunca impide enviar el pedido.
 // Guarda el pedido (con o sin cuenta) para que aparezca en la administración. Nunca impide enviarlo.
+// Devuelve { ok } si quedó registrado, o { rechazo: "motivo" } si la base de datos lo rechazó.
 async function guardarPedido() {
-  if (!nube) return;
+  if (!nube) return {};
   if (sesion) guardarPerfil();
   const t = totales();
   const fila = {
@@ -2000,23 +2071,32 @@ async function guardarPedido() {
       cantidad: cantidadDe(p, p.n), texto: textoLinea(p, p.n) })),
     subtotal: t.subtotal, despacho: CONFIG.tarifa, total: t.total,
     codigo: codigoPedido, comprobante: conComprobante() ? comprobanteUrl.slice(0, 300) : null,
+    pin_hash: pinPedido ? await hashPin(codigoPedido, pinPedido) : null,
   };
   try {
     const guardarFila = async () => {
-      const r = await nube.from("pedidos").insert(fila);
+      let r = await nube.from("pedidos").insert(fila);
       // si la tabla aún no tiene las columnas nuevas (falta correr el SQL), guarda sin ellas
-      if (r.error && /codigo|comprobante|column/i.test(r.error.message || "")) {
-        delete fila.codigo; delete fila.comprobante;
-        await nube.from("pedidos").insert(fila);
+      if (r.error && /pin_hash|codigo|comprobante|column/i.test(r.error.message || "")) {
+        delete fila.codigo; delete fila.comprobante; delete fila.pin_hash;
+        pinPedido = "";
+        r = await nube.from("pedidos").insert(fila);
       }
+      if (!r.error) return { ok: true };
+      // mensajes de nuestras reglas (país, pedidos seguidos): se le muestran al cliente
+      if (r.error.code === "P0001") return { rechazo: r.error.message };
+      return {};
     };
-    await Promise.race([guardarFila(), new Promise((r) => setTimeout(r, 4000))]);
-  } catch (e) { /* el pedido se envía igual */ }
+    const r = await Promise.race([guardarFila(), new Promise((ok) => setTimeout(() => ok({}), 5000))]);
+    if (!r.ok) pinPedido = "";
+    return r;
+  } catch (e) { pinPedido = ""; return {}; }   // sin conexión con la base: el pedido se envía igual por WhatsApp
 }
 
 async function pintarHistorial() {
   $("historial").replaceChildren(crear("p", "vacio", "Cargando…"));
-  const { data, error } = await nube.from("pedidos").select("*").order("creado", { ascending: false }).limit(30);
+  let { data, error } = await nube.from("pedidos").select("id, creado, items, otros, total, estado").order("creado", { ascending: false }).limit(30);
+  if (error) ({ data, error } = await nube.from("pedidos").select("id, creado, items, otros, total").order("creado", { ascending: false }).limit(30));
   if (error) { $("historial").replaceChildren(crear("p", "vacio", "No se pudo cargar tu historial.")); return; }
   if (!data.length) { $("historial").replaceChildren(crear("p", "vacio", "Aún no tienes pedidos guardados.")); return; }
   $("historial").replaceChildren(...data.map((ped) => {
@@ -2132,6 +2212,7 @@ async function iniciar() {
   cargar();
   GEMELOS.forEach(([a, b]) => { $(b).value = $(a).value; });
   pintarServicios();
+  pintarPines();
   pintarPagos();
   pintarFiltros();
   pintarLista();
