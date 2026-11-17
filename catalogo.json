@@ -21,7 +21,21 @@
       "precio": 3490,
       "cat": "Panadería",
       "marca": "Ideal",
-      "imagen": "img/pan-de-molde-grande-xl-1-un-mwhyd9vf.jpg"
+      "imagen": "img/pan-de-molde-grande-xl-1-un-mwhyd9vf.jpg",
+      "pais": "cl",
+      "paisLado": "der",
+      "etiquetas": [
+        {
+          "texto": "Oferta",
+          "color": "rojo",
+          "lado": "izq"
+        },
+        {
+          "texto": "2x1",
+          "color": "azul",
+          "lado": "der"
+        }
+      ]
     },
     {
       "id": "p02",
@@ -189,5 +203,6 @@
       "detalle": "Hacemos copias rápidas de tus llaves y te ayudamos a acceder a tú departamento.",
       "precio": "Desde $1.500"
     }
-  ]
+  ],
+  "banners": []
 }
