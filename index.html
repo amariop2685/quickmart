@@ -387,8 +387,9 @@
     font: inherit; cursor: pointer; background: none; border: 0; color: var(--suave); border-radius: 8px;
     display: inline-flex; align-items: center; padding: 6px;
   }
-  .quitar:hover, .vaciar:hover { color: var(--verde); background: #fde8e9; }
-  .vaciar { font-size: .86rem; font-weight: 500; padding: 6px 8px; margin: 0 0 4px auto; }
+  .quitar, .vaciar { color: var(--verde); }   /* rojo: se distinguen del resto de los íconos */
+  .quitar:hover, .vaciar:hover { color: #fff; background: var(--verde); }
+  .vaciar { font-size: .86rem; font-weight: 600; padding: 6px 10px; margin: 0 0 4px auto; background: #fde8e9; }
   .detalleCabeza { display: flex; align-items: center; justify-content: space-between; }
   .detalleCabeza b { font-weight: 600; }
   .pestanas button { display: inline-flex; align-items: center; justify-content: center; }
