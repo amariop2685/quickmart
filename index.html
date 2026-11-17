@@ -486,6 +486,8 @@
   .misPines .pin b { font: 700 1.05rem ui-monospace, Menlo, monospace; letter-spacing: .15em; }
   .misPines .pin span { flex: 1; min-width: 0; }
   .misPines .pin button { font: inherit; cursor: pointer; background: none; border: 0; color: var(--suave); padding: 4px 6px; }
+  .verificacion:empty { display: none; }
+  .verificacion { display: flex; justify-content: center; margin-bottom: 4px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -665,6 +667,7 @@
     </div>
     <div class="caja" id="datosEntrega" style="margin-top:10px"></div>
     <div class="acciones">
+      <div class="verificacion" id="verificacion"></div>
       <p class="error" id="error3" role="alert"></p>
       <button class="enviar" type="button" id="enviar">Enviar pedido por WhatsApp</button>
       <button type="button" class="volver" data-ir="2">← Cambiar mis datos</button>
@@ -800,6 +803,8 @@ let CONFIG = {}, PRODUCTOS = [], SERVICIOS = [], BANNERS = [];
 
 // Cuentas de clientes (Supabase). Con estos dos datos vacíos la página funciona sin cuentas.
 // La clave es la "publishable key": es pública por diseño; lo que protege los datos son las reglas de la tabla.
+// Cloudflare Turnstile (verificación anti-bots). La clave del sitio es pública; vacía = sin verificación.
+const TURNSTILE = { sitio: "" };
 const CUENTAS = { url: "https://rurxnvvfnbqrsvgapndr.supabase.co", clave: "sb_publishable_nsf17n-bNwxQ_FxwTBsKqw_j1m_0rOg" };
 
 const $ = (id) => document.getElementById(id);
@@ -1488,7 +1493,7 @@ function mostrarPaso(n, mover) {
     if (Number(s.dataset.paso) === n) s.setAttribute("aria-current", "step"); else s.removeAttribute("aria-current");
   });
   if (n === 2) { pintarPaso2(); pintarTransferencia(); }
-  if (n === 3) { pintarConfirmacion(); pintarNotaCuenta(); }
+  if (n === 3) { pintarConfirmacion(); pintarNotaCuenta(); prepararTurnstile(); }
   if (mover) (n === 1 ? document.body : $("paso" + n)).scrollIntoView();
 }
 // Cada paso queda en el historial: el botón "atrás" del celular vuelve al paso anterior.
@@ -1623,6 +1628,36 @@ $("comprobante").addEventListener("change", async () => {
 });
 
 // --- envío ---
+// --- Cloudflare Turnstile: comprueba en silencio que quien pide es una persona ---
+let tokenTurnstile = "", widgetTurnstile = null, cargandoTurnstile = null;
+const usaTurnstile = () => Boolean(TURNSTILE.sitio && nube);
+function prepararTurnstile() {
+  if (!usaTurnstile() || widgetTurnstile !== null) return;
+  if (!cargandoTurnstile) {
+    cargandoTurnstile = new Promise((ok, mal) => {
+      const sc = document.createElement("script");
+      sc.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      sc.async = true; sc.onload = ok; sc.onerror = mal;
+      document.head.append(sc);
+    });
+  }
+  cargandoTurnstile.then(() => {
+    if (widgetTurnstile !== null || !window.turnstile) return;
+    widgetTurnstile = window.turnstile.render("#verificacion", {
+      sitekey: TURNSTILE.sitio,
+      appearance: "interaction-only",   // solo se ve si Cloudflare necesita que el cliente toque algo
+      size: "flexible",
+      callback: (t) => { tokenTurnstile = t; $("error3").textContent = ""; },
+      "expired-callback": () => { tokenTurnstile = ""; },
+      "error-callback": () => { tokenTurnstile = ""; },
+    });
+  }).catch(() => { /* sin conexión con Cloudflare: el pedido igual se puede enviar por WhatsApp */ });
+}
+function reiniciarTurnstile() {
+  tokenTurnstile = "";
+  if (widgetTurnstile !== null && window.turnstile) window.turnstile.reset(widgetTurnstile);
+}
+
 // Código corto del pedido: aparece en el WhatsApp y en la administración para reconocerlo.
 let codigoPedido = "";
 let pinPedido = "";
@@ -1690,6 +1725,10 @@ $("enviar").onclick = async () => {
   guardar();
   // un bot llena el campo invisible: se le muestra que salió bien pero no se registra nada
   if ($("sitioWeb").value) { avisar("Pedido enviado"); return; }
+  if (usaTurnstile() && !tokenTurnstile && window.turnstile) {
+    $("error3").textContent = "Un momento: estamos comprobando que no eres un robot. Vuelve a tocar el botón en unos segundos.";
+    return;
+  }
   codigoPedido = nuevoCodigo();
   pinPedido = nube ? nuevoPin() : "";
   const mensaje = armarMensaje();   // el PIN nunca va en el mensaje
@@ -2075,6 +2114,16 @@ async function guardarPedido() {
   };
   try {
     const guardarFila = async () => {
+      // con Turnstile, el pedido pasa por la función de servidor que comprueba que no es un bot
+      if (usaTurnstile() && tokenTurnstile) {
+        const { data, error } = await nube.functions.invoke("crear-pedido", { body: { pedido: fila, token: tokenTurnstile } });
+        reiniciarTurnstile();   // cada comprobación sirve una sola vez
+        if (!error && data && data.ok) return { ok: true };
+        let detalle = null;
+        try { detalle = error && error.context && error.context.json ? await error.context.json() : null; } catch (e) { /* sin detalle */ }
+        if (detalle && (detalle.codigo === "rechazo" || detalle.codigo === "verificacion")) return { rechazo: detalle.error };
+        // si la función aún no está lista, intenta el camino directo (sirve hasta cerrar esa puerta)
+      }
       let r = await nube.from("pedidos").insert(fila);
       // si la tabla aún no tiene las columnas nuevas (falta correr el SQL), guarda sin ellas
       if (r.error && /pin_hash|codigo|comprobante|column/i.test(r.error.message || "")) {
@@ -2087,7 +2136,7 @@ async function guardarPedido() {
       if (r.error.code === "P0001") return { rechazo: r.error.message };
       return {};
     };
-    const r = await Promise.race([guardarFila(), new Promise((ok) => setTimeout(() => ok({}), 5000))]);
+    const r = await Promise.race([guardarFila(), new Promise((ok) => setTimeout(() => ok({}), 9000))]);
     if (!r.ok) pinPedido = "";
     return r;
   } catch (e) { pinPedido = ""; return {}; }   // sin conexión con la base: el pedido se envía igual por WhatsApp
