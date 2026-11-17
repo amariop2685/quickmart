@@ -464,6 +464,17 @@
   .agregar.agotado { background: #eef0f8; border-color: #eef0f8; color: var(--suave); opacity: 1; }
   .pocas { color: #8a5600; font-size: .78rem; font-weight: 600; }
   .oferta .pocas { order: 5; }
+  .pagoRapido { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin: 12px 0 2px; font-size: .88rem; color: var(--suave); }
+  .pagoRapido div { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pagoRapido button {
+    font: inherit; font-size: .86rem; font-weight: 600; cursor: pointer; border-radius: 999px; padding: 6px 12px;
+    background: #fff; color: var(--texto); border: 1px solid var(--borde);
+  }
+  .pagoRapido button[aria-pressed="true"] { background: var(--texto); border-color: var(--texto); color: #fff; }
+  .otrosPrecios { color: var(--suave); font-size: .76rem; font-weight: 400; line-height: 1.3; }
+  .oferta .otrosPrecios { order: 2; }
+  .soloPago { color: #8a5600; font-size: .76rem; font-weight: 600; }
+  .oferta .soloPago { order: 5; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -509,6 +520,10 @@
         <h2><span id="ofertasTitulo">Ofertas</span></h2>
         <div class="carrusel" id="carrusel"></div>
       </section>
+      <div class="pagoRapido" id="pagoRapido" hidden>
+        <span>Precios pagando con</span>
+        <div id="pagoChips"></div>
+      </div>
       <div class="filtros" id="filtros"></div>
 
       <div class="lista" id="lista" style="margin-top:12px"></div>
@@ -528,6 +543,7 @@
         </div>
         <div id="resumen"></div>
         <div class="linea"><span>Subtotal referencial</span><span id="subtotal"></span></div>
+        <div class="linea" id="lineaAjuste" hidden><span id="ajusteTexto"></span><span id="ajuste"></span></div>
         <div class="linea"><span>Despacho</span><span id="tarifa"></span></div>
         <div class="linea total"><span>Total estimado</span><span id="total"></span></div>
         <p class="nota">Los precios son referenciales. El total final se confirma por WhatsApp antes de la entrega.</p>
@@ -597,10 +613,7 @@
         </div>
       </div>
       <label>Forma de pago
-        <select id="pago">
-          <option>Transferencia</option>
-          <option>Efectivo al recibir</option>
-        </select>
+        <select id="pago"></select>
       </label>
       <div class="caja" id="cajaTransferencia" style="display:grid;gap:10px">
         <div id="datosBanco" hidden>
@@ -632,6 +645,7 @@
     <div class="caja">
       <div id="confirmacion"></div>
       <div class="linea"><span>Subtotal referencial</span><span id="subtotal3"></span></div>
+      <div class="linea" id="lineaAjuste3" hidden><span id="ajusteTexto3"></span><span id="ajuste3"></span></div>
       <div class="linea"><span>Despacho</span><span id="tarifa3"></span></div>
       <div class="linea total"><span>Total estimado</span><span id="total3"></span></div>
     </div>
@@ -942,6 +956,9 @@ function cambiar(id, delta) {
   const tope = prod ? Math.min(99, maximoDe(prod)) : 99;
   const n = Math.max(0, Math.min(tope, (carrito[id] || 0) + delta));
   if (n === 0) delete carrito[id]; else carrito[id] = n;
+  const pagoAntes = pagoElegido();
+  pintarPagos();
+  if (pagoElegido() !== pagoAntes && pagoElegido()) avisar("El pago cambió a " + PAGOS_CORTO[pagoElegido()].toLowerCase() + ": es el que aceptan todos tus productos.");
   pintarLista(); pintarOfertas(); pintarResumen(); guardar();
 }
 
@@ -978,7 +995,28 @@ function controlCantidad(p) {
 const porMedida = (p) => p.unidad === "kg" || p.unidad === "L";
 const pasoDe = (p) => (porMedida(p) && Number(p.paso) > 0 ? Number(p.paso) : 1);
 const cantidadDe = (p, n) => Math.round(n * pasoDe(p) * 1000) / 1000;
-const importe = (p, n) => Math.round(p.precio * cantidadDe(p, n));
+// --- formas de pago: cada producto puede tener un precio distinto y aceptar solo algunas ---
+const PAGOS = { transferencia: "Transferencia", efectivo: "Efectivo al recibir", tarjeta: "Tarjeta al recibir" };
+const PAGOS_CORTO = { transferencia: "Transferencia", efectivo: "Efectivo", tarjeta: "Tarjeta" };
+const pagoElegido = () => $("pago").value;
+const pagoTexto = () => PAGOS[pagoElegido()] || "";
+// formas de pago que ofrece el negocio (se eligen en la administración)
+function pagosNegocio() {
+  const lista = (Array.isArray(CONFIG.pagos) ? CONFIG.pagos : ["transferencia", "efectivo"]).filter((m) => PAGOS[m]);
+  return lista.length ? lista : ["transferencia", "efectivo"];
+}
+// formas de pago que acepta un producto (si no se indicó nada, todas las del negocio)
+function pagosProducto(p) {
+  const propias = Array.isArray(p.pagos) ? p.pagos.filter((m) => pagosNegocio().includes(m)) : [];
+  return propias.length ? propias : pagosNegocio();
+}
+const tienePrecioPropio = (p, m) => Boolean(p.precios) && Number(p.precios[m]) > 0;
+const precioDe = (p, m) => (tienePrecioPropio(p, m || pagoElegido()) ? Number(p.precios[m || pagoElegido()]) : p.precio);
+// formas de pago con las que se puede pagar toda la canasta
+function pagosCanasta() {
+  return pagosNegocio().filter((m) => PRODUCTOS.every((p) => !carrito[p.id] || pagosProducto(p).includes(m)));
+}
+const importe = (p, n) => Math.round(precioDe(p) * cantidadDe(p, n));
 function textoCantidad(p, n) {
   if (!porMedida(p)) return String(n);
   const c = cantidadDe(p, n);
@@ -1034,6 +1072,18 @@ function etiquetasDe(p) {
 }
 const medidaDe = (p) => (porMedida(p) ? (p.unidad === "kg" ? " el kilo" : " el litro") : "");
 
+// Notas bajo el precio: los otros precios según forma de pago, y si el producto acepta solo algunas.
+function notasPago(p) {
+  const notas = [];
+  const aceptadas = pagosProducto(p);
+  const otros = aceptadas.filter((m) => m !== pagoElegido() && precioDe(p, m) !== precioDe(p));
+  if (otros.length) notas.push(crear("div", "otrosPrecios", otros.map((m) => PAGOS_CORTO[m] + " " + pesos(precioDe(p, m))).join(" · ")));
+  if (aceptadas.length < pagosNegocio().length) {
+    notas.push(crear("div", "soloPago", "Solo " + aceptadas.map((m) => PAGOS_CORTO[m].toLowerCase()).join(" o ")));
+  }
+  return notas;
+}
+
 // Fila ancha: se usa en los resultados de la búsqueda.
 function filaProducto(p) {
   const fila = crear("div", "producto");
@@ -1041,16 +1091,17 @@ function filaProducto(p) {
   if (p.marca) datos.append(crear("div", "marca", p.marca));
   const formato = porMedida(p)
     ? [p.formato, "Pide de a " + textoCantidad(p, 1)].filter(Boolean).join(" · ") : p.formato;
-  const precio = crear("div", "precio", pesos(p.precio) + medidaDe(p));
+  const precio = crear("div", "precio", pesos(precioDe(p)) + medidaDe(p));
   const nombre = crear("div", "nombre", p.nombre);
   const chica = banderaDe(p, true);
   if (chica) nombre.append(chica);
   datos.append(nombre, crear("div", "formato", formato), precio);
   const antes = Number(p.antes) || 0;
-  if (antes > p.precio) {   // rebaja: precio anterior tachado y cuánto se ahorra
+  if (antes > precioDe(p)) {   // rebaja: precio anterior tachado y cuánto se ahorra
     precio.append(crear("span", "antes", pesos(antes)));
-    datos.append(crear("div", "ahorra", "Ahorra " + pesos(antes - p.precio) + (porMedida(p) ? " por" + medidaDe(p).replace(" el", "") : "")));
+    datos.append(crear("div", "ahorra", "Ahorra " + pesos(antes - precioDe(p)) + (porMedida(p) ? " por" + medidaDe(p).replace(" el", "") : "")));
   }
+  datos.append(...notasPago(p));
   fila.append(foto(p), datos, controlCantidad(p));
   const etiquetas = etiquetasDe(p);
   if (etiquetas.length) { fila.classList.add("conEtiqueta"); fila.append(...etiquetas); }
@@ -1060,14 +1111,15 @@ function filaProducto(p) {
 // Tarjeta vertical: se usa en los carruseles (ofertas y categorías).
 function tarjetaProducto(p, normal) {
   const t = crear("div", "oferta" + (normal ? " normal" : ""));
-  const precio = crear("div", "precio", pesos(p.precio) + medidaDe(p));
+  const precio = crear("div", "precio", pesos(precioDe(p)) + medidaDe(p));
   const antes = Number(p.antes) || 0;
-  if (antes > p.precio) precio.append(crear("span", "antes", pesos(antes)));
+  if (antes > precioDe(p)) precio.append(crear("span", "antes", pesos(antes)));
   t.append(foto(p));
   t.append(crear("div", "marca", p.marca || ""));
   const formato = porMedida(p) ? "De a " + textoCantidad(p, 1) : p.formato;
   t.append(crear("div", "nombre", p.nombre), crear("div", "formato", formato || ""), precio);
-  if (antes > p.precio) t.append(crear("div", "ahorra", "Ahorra " + pesos(antes - p.precio)));
+  if (antes > precioDe(p)) t.append(crear("div", "ahorra", "Ahorra " + pesos(antes - precioDe(p))));
+  t.append(...notasPago(p));
   if (pocoStock(p)) t.append(crear("div", "pocas", "Últimas unidades"));
   const control = crear("div", "control");
   control.append(controlCantidad(p));
@@ -1130,6 +1182,7 @@ function flecha(texto, etiqueta, alTocar) {
 
 // Sin búsqueda: un carrusel por categoría. Con búsqueda: lista de resultados.
 function pintarLista() {
+  pintarPagos();   // la canasta pudo cambiar: las formas de pago posibles también
   const q = $("buscar").value.trim().toLowerCase();
   const visibles = PRODUCTOS.filter((p) =>
     (categoria === "Todo" || p.cat === categoria) &&
@@ -1167,7 +1220,7 @@ function pintarLista() {
 }
 
 // --- carrusel de ofertas: productos con rebaja o con etiqueta ---
-const enOferta = (p) => Number(p.antes) > p.precio || (Array.isArray(p.etiquetas) && p.etiquetas.some((e) => e && e.texto));
+const enOferta = (p) => Number(p.antes) > precioDe(p) || (Array.isArray(p.etiquetas) && p.etiquetas.some((e) => e && e.texto));
 
 function pintarOfertas() {
   const activo = CONFIG.carrusel !== false;   // se apaga desde la administración
@@ -1214,7 +1267,50 @@ function totales() {
   const items = elegidos();
   const subtotal = items.reduce((s, p) => s + importe(p, p.n), 0);
   const unidades = items.reduce((s, p) => s + (porMedida(p) ? 1 : p.n), 0);
-  return { items, subtotal, unidades, total: subtotal + CONFIG.tarifa };
+  const aj = ajustePago(items.reduce((s, p) => s + (tienePrecioPropio(p, pagoElegido()) ? 0 : importe(p, p.n)), 0));
+  return { items, subtotal, unidades, ajuste: aj.monto, ajusteTexto: aj.texto, total: subtotal + aj.monto + CONFIG.tarifa };
+}
+// Descuento o recargo según la forma de pago elegida (se configura en la administración).
+function ajustePago(subtotal) {
+  const m = pagoElegido();
+  const pct = porcentajePago(m);
+  const monto = Math.round(subtotal * pct / 100);
+  const medio = { transferencia: "pago con transferencia", efectivo: "pago en efectivo", tarjeta: "pago con tarjeta" }[m] || "forma de pago";
+  const texto = (pct < 0 ? "Descuento por " : "Recargo por ") + medio + " (" + Math.abs(pct).toLocaleString("es-CL") + " %)";
+  return { monto, texto, pct };
+}
+const porcentajePago = (m) => Number({ transferencia: CONFIG.ajusteTransferencia, efectivo: CONFIG.ajusteEfectivo, tarjeta: CONFIG.ajusteTarjeta }[m]) || 0;
+
+// Llena la lista de formas de pago con las que sirven para toda la canasta, y los botones rápidos sobre los productos.
+function pintarPagos() {
+  const validas = pagosCanasta();
+  const actual = validas.includes(pagoElegido()) ? pagoElegido() : (validas[0] || "");
+  $("pago").replaceChildren(...validas.map((m) => {
+    const pct = porcentajePago(m);
+    return new Option(PAGOS[m] + (pct ? " (" + (pct < 0 ? "−" : "+") + Math.abs(pct).toLocaleString("es-CL") + " %)" : ""), m);
+  }));
+  $("pago").value = actual;
+  // los botones rápidos solo aparecen si el precio cambia según cómo se pague
+  const cambia = pagosNegocio().some((m) => porcentajePago(m)) ||
+    PRODUCTOS.some((p) => pagosNegocio().some((m) => tienePrecioPropio(p, m)) || pagosProducto(p).length < pagosNegocio().length);
+  $("pagoRapido").hidden = !cambia || validas.length < 2;
+  $("pagoChips").replaceChildren(...validas.map((m) => {
+    const b = crear("button", "", PAGOS_CORTO[m]);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(m === actual));
+    b.onclick = () => { $("pago").value = m; alCambiarPago(); };
+    return b;
+  }));
+}
+function alCambiarPago() {
+  pintarPagos(); pintarLista(); pintarOfertas(); pintarResumen(); pintarTransferencia();
+  if (paso === 3) pintarConfirmacion();
+}
+
+function pintarAjuste(sufijo, t) {
+  $("lineaAjuste" + sufijo).hidden = t.ajuste === 0;
+  $("ajusteTexto" + sufijo).textContent = t.ajusteTexto;
+  $("ajuste" + sufijo).textContent = (t.ajuste < 0 ? "−" : "+") + pesos(Math.abs(t.ajuste));
 }
 
 function lineasPedido(t) {
@@ -1244,6 +1340,7 @@ function pintarResumen() {
   }
   $("vaciar").hidden = t.items.length === 0;
   $("subtotal").textContent = pesos(t.subtotal);
+  pintarAjuste("", t);
   $("tarifa").textContent = pesos(CONFIG.tarifa);
   $("total").textContent = pesos(t.total);
   const abierto = $("pedido").classList.contains("abierto");
@@ -1289,6 +1386,11 @@ function errorPaso1() {
   const t = totales();
   if (t.items.length === 0 && !$("otros").value.trim()) return "Agrega al menos un producto o escribe lo que necesitas.";
   if (CONFIG.minimo > 0 && t.subtotal < CONFIG.minimo) return "El pedido mínimo es " + pesos(CONFIG.minimo) + ".";
+  if (t.items.length && pagosCanasta().length === 0) {
+    return "Los productos de tu canasta no comparten una forma de pago. Pídelos en pedidos separados: " +
+      t.items.filter((p) => pagosProducto(p).length < pagosNegocio().length)
+        .map((p) => p.nombre + " (solo " + pagosProducto(p).map((m) => PAGOS_CORTO[m].toLowerCase()).join(" o ") + ")").join(", ") + ".";
+  }
   return "";
 }
 function errorPaso2() {
@@ -1339,11 +1441,12 @@ function pintarConfirmacion() {
   if (otros) lineas.push(dato("Además", otros));
   $("confirmacion").replaceChildren(...lineas);
   $("subtotal3").textContent = pesos(t.subtotal);
+  pintarAjuste("3", t);
   $("tarifa3").textContent = pesos(CONFIG.tarifa);
   $("total3").textContent = pesos(t.total);
   $("datosEntrega").replaceChildren(
     dato("Entregar a", nombreCompleto() + " — " + $("edificio").value + ", depto " + $("depto").value.trim()),
-    dato("Forma de pago", $("pago").value + (conComprobante() ? " — comprobante adjunto ✓" : "")));
+    dato("Forma de pago", pagoTexto() + (conComprobante() ? " — comprobante adjunto ✓" : "")));
   $("error3").textContent = "";
   $("vistaMensaje").hidden = true;
 }
@@ -1409,10 +1512,10 @@ document.querySelectorAll(".volver[data-ir]").forEach((b) => {
 // --- pago con transferencia: datos de la cuenta y comprobante ---
 let comprobanteUrl = "";
 let subiendoComprobante = false;
-const conComprobante = () => $("pago").value === "Transferencia" && Boolean(comprobanteUrl);
+const conComprobante = () => pagoElegido() === "transferencia" && Boolean(comprobanteUrl);
 
 function pintarTransferencia() {
-  const esTransferencia = $("pago").value === "Transferencia";
+  const esTransferencia = pagoElegido() === "transferencia";
   const banco = String(CONFIG.transferencia || "").trim();
   $("datosBanco").hidden = !banco;
   pintarBanco(banco);
@@ -1420,7 +1523,7 @@ function pintarTransferencia() {
   $("cajaComprobante").hidden = !nube;
   $("cajaTransferencia").hidden = !esTransferencia || (!banco && !nube);
 }
-$("pago").addEventListener("change", pintarTransferencia);
+$("pago").addEventListener("change", alCambiarPago);
 
 // Copia un texto y lo confirma en el mismo botón.
 async function copiar(texto, boton) {
@@ -1507,9 +1610,10 @@ function armarMensaje() {
   lineas.push(
     "",
     "Subtotal referencial: " + pesos(t.subtotal),
+    ...(t.ajuste ? [t.ajusteTexto + ": " + (t.ajuste < 0 ? "−" : "+") + pesos(Math.abs(t.ajuste))] : []),
     "Despacho: " + pesos(CONFIG.tarifa),
     "Total estimado: " + pesos(t.total),
-    "Pago: " + $("pago").value,
+    "Pago: " + pagoTexto(),
   );
   if (conComprobante()) lineas.push("Comprobante: " + comprobanteUrl);
   return lineas.join("\n");
@@ -1881,8 +1985,8 @@ async function guardarPedido() {
   const t = totales();
   const fila = {
     nombre: nombreCompleto().slice(0, 80), edificio: $("edificio").value.slice(0, 80),
-    depto: $("depto").value.trim().slice(0, 20), pago: $("pago").value, otros: $("otros").value.trim().slice(0, 500),
-    items: t.items.map((p) => ({ id: p.id, nombre: titulo(p), formato: p.formato, precio: p.precio, n: p.n, texto: textoLinea(p, p.n) })),
+    depto: $("depto").value.trim().slice(0, 20), pago: pagoTexto(), otros: $("otros").value.trim().slice(0, 500),
+    items: t.items.map((p) => ({ id: p.id, nombre: titulo(p), formato: p.formato, precio: precioDe(p), n: p.n, texto: textoLinea(p, p.n) })),
     subtotal: t.subtotal, despacho: CONFIG.tarifa, total: t.total,
   };
   try {
@@ -1983,7 +2087,6 @@ async function iniciar() {
   CONFIG.whatsapp = String(CONFIG.whatsapp || "");
   CONFIG.tarifa = Number(CONFIG.tarifa) || 0;
   CONFIG.minimo = Number(CONFIG.minimo) || 0;
-  CONFIG.edificios = Array.isArray(CONFIG.edificios) ? CONFIG.edificios : [];
   PRODUCTOS.forEach((p, i) => { if (!p.id) p.id = "p" + i; p.precio = Number(p.precio) || 0; });
 
   document.title = CONFIG.nombre;
@@ -2009,6 +2112,7 @@ async function iniciar() {
   cargar();
   GEMELOS.forEach(([a, b]) => { $(b).value = $(a).value; });
   pintarServicios();
+  pintarPagos();
   pintarFiltros();
   pintarLista();
   pintarOfertas();

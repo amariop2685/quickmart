@@ -224,6 +224,25 @@
         <label>Cobro por despacho (pesos) <input id="nTarifa" type="number" min="0" step="100"></label>
         <label>Pedido mínimo (pesos) <small>0 = sin mínimo</small><input id="nMinimo" type="number" min="0" step="100"></label>
       </div>
+      <div class="dos">
+        <label>Si paga con transferencia (%) <small>Sobre el valor de los productos. Negativo = descuento, positivo = recargo, 0 = sin cambio. Ej.: -5</small>
+          <input id="nAjusteT" type="number" min="-50" max="50" step="0.5">
+        </label>
+        <label>Si paga en efectivo (%) <small>Igual que el anterior. Ej.: 3 suma un 3 %.</small>
+          <input id="nAjusteE" type="number" min="-50" max="50" step="0.5">
+        </label>
+      </div>
+      <div class="dos">
+        <label>Si paga con tarjeta (%) <small>Solo se usa si aceptas tarjeta.</small>
+          <input id="nAjusteTa" type="number" min="-50" max="50" step="0.5">
+        </label>
+        <fieldset style="border:0;padding:0;margin:0;display:grid;gap:6px">
+          <legend style="font-weight:600;font-size:.92rem;padding:0;margin-bottom:4px">Formas de pago que aceptas</legend>
+          <label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="nPagoT" style="width:20px;height:20px"> Transferencia</label>
+          <label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="nPagoE" style="width:20px;height:20px"> Efectivo al recibir</label>
+          <label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="nPagoTa" style="width:20px;height:20px"> Tarjeta al recibir (necesitas una máquina de cobro)</label>
+        </fieldset>
+      </div>
       <label>Horario de entregas <input id="nHorario"></label>
       <label style="display:flex;align-items:flex-start;gap:10px;font-weight:600">
         <input id="nCarrusel" type="checkbox" style="width:22px;height:22px;flex:none;margin-top:2px">
@@ -275,6 +294,16 @@
         <input id="pStockMin" type="number" min="0" step="any" inputmode="decimal">
       </label>
     </div>
+    <fieldset style="border:1px solid var(--borde);border-radius:12px;padding:10px 12px;margin:0;display:grid;gap:10px">
+      <legend style="font-weight:600;font-size:.92rem;padding:0 6px">Formas de pago de este producto</legend>
+      <small style="color:var(--suave)">Desmarca las que no aceptas para este producto. El precio especial es opcional: si lo dejas vacío, se usa el precio de arriba.</small>
+      <div class="dos"><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="pPagoT" style="width:20px;height:20px"> Transferencia</label>
+        <input id="pPrecioT" type="number" min="0" step="10" placeholder="Precio con transferencia" aria-label="Precio con transferencia"></div>
+      <div class="dos"><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="pPagoE" style="width:20px;height:20px"> Efectivo</label>
+        <input id="pPrecioE" type="number" min="0" step="10" placeholder="Precio en efectivo" aria-label="Precio en efectivo"></div>
+      <div class="dos"><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="pPagoTa" style="width:20px;height:20px"> Tarjeta</label>
+        <input id="pPrecioTa" type="number" min="0" step="10" placeholder="Precio con tarjeta" aria-label="Precio con tarjeta"></div>
+    </fieldset>
     <label>Precio normal, antes de la rebaja <small>Opcional. Si es mayor que el precio, la tienda muestra el precio anterior tachado y la etiqueta “Ahorra”.</small>
       <input id="pAntes" type="number" min="0" step="10">
     </label>
@@ -573,6 +602,8 @@ function miniatura(p) {
   return img;
 }
 
+const PAGOS_FICHA = [["transferencia", "pPagoT", "pPrecioT"], ["efectivo", "pPagoE", "pPrecioE"], ["tarjeta", "pPagoTa", "pPrecioTa"]];
+
 // --- stock ---
 const redondo = (n) => Math.round(n * 1000) / 1000;
 const conStock = (p) => Number.isFinite(p.stock);
@@ -661,6 +692,10 @@ function abrirProducto(p) {
   $("pPrecio").value = p ? p.precio : "";
   $("pCat").value = p ? p.cat || "" : "";
   $("pAntes").value = p && p.antes ? p.antes : "";
+  PAGOS_FICHA.forEach(([m, casilla, campo]) => {
+    $(casilla).checked = !(p && Array.isArray(p.pagos) && p.pagos.length) || p.pagos.includes(m);
+    $(campo).value = p && p.precios && Number(p.precios[m]) > 0 ? p.precios[m] : "";
+  });
   $("pStock").value = p && Number.isFinite(p.stock) ? p.stock : "";
   $("pStockMin").value = p && Number.isFinite(p.stockMin) ? p.stockMin : "";
   $("pPais").value = p && p.pais ? p.pais : "";
@@ -740,6 +775,7 @@ $("formProducto").addEventListener("submit", async (e) => {
   let error = "";
   if (!nombre) error = "Escribe el nombre del producto.";
   else if ($("pPrecio").value === "" || !Number.isFinite(precio) || precio < 0) error = "Escribe un precio válido.";
+  if (!error && !PAGOS_FICHA.some(([, casilla]) => $(casilla).checked)) error = "Marca al menos una forma de pago para este producto.";
   const antes = Math.round(Number($("pAntes").value) || 0);
   if (!error && antes && antes <= precio) error = "El precio normal debe ser mayor que el precio de venta. Déjalo vacío si no hay rebaja.";
   $("pError").textContent = error;
@@ -767,6 +803,12 @@ $("formProducto").addEventListener("submit", async (e) => {
   p.precio = Math.round(precio);
   p.cat = $("pCat").value.trim() || "Otros";
   if (antes > precio) p.antes = antes; else delete p.antes;
+  // formas de pago: se guarda la lista solo si se desmarcó alguna, y los precios especiales que se escribieron
+  const aceptadas = PAGOS_FICHA.filter(([, casilla]) => $(casilla).checked).map(([m]) => m);
+  if (aceptadas.length < PAGOS_FICHA.length) p.pagos = aceptadas; else delete p.pagos;
+  const precios = {};
+  PAGOS_FICHA.forEach(([m, , campo]) => { const v = Math.round(Number($(campo).value) || 0); if (v > 0) precios[m] = v; });
+  if (Object.keys(precios).length) p.precios = precios; else delete p.precios;
   if ($("pStock").value !== "" && Number($("pStock").value) >= 0) {
     p.stock = redondo(Number($("pStock").value));
     p.stockMin = $("pStockMin").value !== "" && Number($("pStockMin").value) >= 0 ? redondo(Number($("pStockMin").value)) : 0;
@@ -904,6 +946,13 @@ function llenarNegocio() {
   $("nWhatsapp").value = c.whatsapp || "";
   $("nTarifa").value = c.tarifa ?? 0;
   $("nMinimo").value = c.minimo ?? 0;
+  $("nAjusteT").value = Number(c.ajusteTransferencia) || 0;
+  $("nAjusteE").value = Number(c.ajusteEfectivo) || 0;
+  $("nAjusteTa").value = Number(c.ajusteTarjeta) || 0;
+  const pagos = Array.isArray(c.pagos) && c.pagos.length ? c.pagos : ["transferencia", "efectivo"];
+  $("nPagoT").checked = pagos.includes("transferencia");
+  $("nPagoE").checked = pagos.includes("efectivo");
+  $("nPagoTa").checked = pagos.includes("tarjeta");
   $("nHorario").value = c.horario || "";
   $("nTransferencia").value = c.transferencia || "";
   $("nCarrusel").checked = c.carrusel !== false;
@@ -918,6 +967,8 @@ $("formNegocio").addEventListener("submit", async (e) => {
   if (!$("nNombre").value.trim()) error = "Escribe el nombre del negocio.";
   else if (edificios.length === 0) error = "Agrega al menos un edificio.";
   else if (whatsapp && whatsapp.length < 10) error = "El número de WhatsApp parece incompleto.";
+  const pagos = [["transferencia", "nPagoT"], ["efectivo", "nPagoE"], ["tarjeta", "nPagoTa"]].filter(([, id]) => $(id).checked).map(([m]) => m);
+  if (!error && pagos.length === 0) error = "Marca al menos una forma de pago.";
   $("nError").textContent = error;
   if (error) return;
   datos.config = {
@@ -927,6 +978,10 @@ $("formNegocio").addEventListener("submit", async (e) => {
     whatsapp,
     tarifa: Math.max(0, Math.round(Number($("nTarifa").value) || 0)),
     minimo: Math.max(0, Math.round(Number($("nMinimo").value) || 0)),
+    ajusteTransferencia: Math.max(-50, Math.min(50, Number($("nAjusteT").value) || 0)),
+    ajusteEfectivo: Math.max(-50, Math.min(50, Number($("nAjusteE").value) || 0)),
+    ajusteTarjeta: Math.max(-50, Math.min(50, Number($("nAjusteTa").value) || 0)),
+    pagos,
     horario: $("nHorario").value.trim(),
     transferencia: $("nTransferencia").value.trim().slice(0, 600),
     carrusel: $("nCarrusel").checked,
