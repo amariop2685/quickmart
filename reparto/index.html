@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b1a4a">
+<title>QuickMart — Repartidores</title>
+<link rel="icon" href="../favicon.ico" sizes="48x48">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<style>
+  :root {
+    --fondo: #f4f5f9; --tarjeta: #fff; --texto: #0b1a4a; --suave: #5b6482;
+    --borde: #dfe2ec; --rojo: #d90b16; --rojo-osc: #b00812; --claro: #eef0f8; --ok: #17803d; --naranjo: #c2570a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--texto);
+         font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .ancho { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+  header { background: #fff; border-bottom: 4px solid var(--rojo); padding: 12px 0; position: sticky; top: 0; z-index: 10; }
+  header .ancho { display: flex; align-items: center; gap: 12px; }
+  header img { height: 38px; width: auto; }
+  header h1 { font-size: 1.05rem; margin: 0; flex: 1; font-weight: 700; }
+  header h1 small { display: block; font-weight: 400; color: var(--suave); font-size: .82rem; }
+  .icono { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .redondo { font: inherit; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+    background: #fff; color: var(--texto); border: 1px solid var(--borde); }
+  .redondo.gira .icono { animation: gira .8s linear infinite; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+
+  #acceso { max-width: 420px; margin: 40px auto; }
+  .caja { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 14px; padding: 18px; }
+  form { display: grid; gap: 12px; }
+  form h2 { margin: 0; font-size: 1.2rem; }
+  form p { margin: 0; color: var(--suave); font-size: .95rem; }
+  label { display: grid; gap: 5px; font-size: .92rem; font-weight: 600; }
+  input { width: 100%; font: inherit; color: inherit; background: #fff; border: 1px solid var(--borde); border-radius: 10px; padding: 12px; }
+  input:focus, button:focus-visible { outline: 2px solid var(--rojo); outline-offset: 1px; }
+  .error { color: var(--rojo); font-size: .92rem; min-height: 1.2em; margin: 0; }
+  .principal, .secundario, .peligro { font: inherit; font-weight: 700; cursor: pointer; border-radius: 12px; padding: 12px 16px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+  .principal { background: var(--rojo); color: #fff; border: 1px solid var(--rojo); }
+  .principal:hover { background: var(--rojo-osc); }
+  .principal.verde { background: var(--ok); border-color: var(--ok); }
+  .secundario { background: #fff; color: var(--texto); border: 1px solid var(--borde); }
+  .peligro { background: #fff; color: var(--rojo); border: 1px solid var(--borde); }
+  button:disabled { opacity: .55; cursor: wait; }
+
+  .pestanas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 14px 0; position: sticky; top: 66px; z-index: 9;
+    background: var(--fondo); padding: 6px 0; }
+  .pestanas button { font: inherit; font-size: .9rem; font-weight: 700; cursor: pointer; padding: 10px 4px; border-radius: 12px;
+    background: #fff; color: var(--texto); border: 1px solid var(--borde); display: grid; justify-items: center; gap: 2px; }
+  .pestanas button b { font-size: 1.25rem; line-height: 1; }
+  .pestanas button[aria-selected="true"] { background: var(--texto); border-color: var(--texto); color: #fff; }
+
+  .lista { display: grid; gap: 10px; padding-bottom: 32px; }
+  .vacio { color: var(--suave); text-align: center; padding: 32px 12px; }
+  .ped { background: #fff; border: 1px solid var(--borde); border-left: 6px solid var(--rojo); border-radius: 14px; padding: 14px; display: grid; gap: 8px; }
+  .ped.en-camino { border-left-color: var(--naranjo); }
+  .ped.entregado { border-left-color: var(--ok); }
+  .ped .cabeza { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .ped .codigo { font: 700 1rem ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .08em; }
+  .ped .hora { color: var(--suave); font-size: .85rem; }
+  .ped .destino { font-size: 1.2rem; font-weight: 700; display: flex; gap: 8px; align-items: center; }
+  .ped .cliente { color: var(--suave); }
+  .ped ul { margin: 0; padding-left: 20px; }
+  .ped .fila { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-weight: 600; }
+  .ped .nota { font-size: .88rem; color: var(--suave); display: flex; gap: 6px; align-items: center; }
+  .ped .nota.alerta { color: #8a5600; }
+  .ped a { color: var(--texto); font-weight: 600; }
+  .ped .acciones { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 4px; }
+  .ped .acciones.uno { grid-template-columns: 1fr; }
+  [hidden] { display: none !important; }
+
+  /* Diálogos y avisos flotantes propios (reemplazan las alertas del navegador). */
+  .capa {
+    position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px;
+    background: rgba(11, 26, 74, .48); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    animation: capaEntra .16s ease-out;
+  }
+  .dialogo {
+    width: min(380px, 100%); background: #fff; color: #0b1a4a; border-radius: 18px; padding: 24px 22px 18px;
+    text-align: center; box-shadow: 0 24px 60px rgba(11, 26, 74, .35); animation: dialogoEntra .2s cubic-bezier(.2, .9, .3, 1.2);
+  }
+  .dialogo .circulo {
+    width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 12px; display: grid; place-items: center;
+    background: #eef0f8; color: #0b1a4a;
+  }
+  .dialogo.peligro .circulo { background: #fde8e9; color: #d90b16; }
+  .dialogo .circulo svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .dialogo h3 { margin: 0 0 6px; font-size: 1.15rem; font-weight: 700; }
+  .dialogo p { margin: 0; color: #5b6482; font-size: .95rem; font-weight: 400; white-space: pre-line; }
+  .dialogo .destacado { font: 700 2.4rem/1.1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .25em; margin: 8px 0 10px; color: #0b1a4a; }
+  .dialogo .campoDialogo { width: 100%; margin-top: 14px; text-align: center; font: 700 1.6rem ui-monospace, Menlo, monospace; letter-spacing: .3em; padding: 10px; border: 2px solid #0b1a4a; border-radius: 12px; }
+  .dialogo .botones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+  .dialogo .botones.uno { grid-template-columns: 1fr; }
+  .dialogo .botones button {
+    font: inherit; font-weight: 600; cursor: pointer; border-radius: 12px; padding: 12px 10px;
+    border: 1px solid #dfe2ec; background: #fff; color: #0b1a4a;
+  }
+  .dialogo .botones .si { background: #0b1a4a; border-color: #0b1a4a; color: #fff; }
+  .dialogo.peligro .botones .si { background: #d90b16; border-color: #d90b16; }
+  .avisos {
+    position: fixed; z-index: 110; top: 14px; right: 14px; left: 14px; display: grid; gap: 8px;
+    justify-items: end; pointer-events: none;
+  }
+  .avisoFlotante {
+    pointer-events: auto; display: flex; align-items: center; gap: 10px; max-width: min(380px, 100%);
+    background: #0b1a4a; color: #fff; border-radius: 12px; padding: 12px 16px; font-size: .95rem; font-weight: 500;
+    box-shadow: 0 12px 30px rgba(11, 26, 74, .35); animation: avisoEntra .22s ease-out;
+  }
+  .avisoFlotante.ok { background: #17663a; } .avisoFlotante.mal { background: #b00812; }
+  .avisoFlotante.sale { opacity: 0; transform: translateY(-8px); transition: opacity .25s, transform .25s; }
+  @keyframes capaEntra { from { opacity: 0; } }
+  @keyframes dialogoEntra { from { opacity: 0; transform: translateY(14px) scale(.96); } }
+  @keyframes avisoEntra { from { opacity: 0; transform: translateY(-10px); } }
+  @media (max-width: 520px) { .avisos { justify-items: stretch; } .avisoFlotante { max-width: none; } }
+  @media (prefers-reduced-motion: reduce) { .capa, .dialogo, .avisoFlotante { animation: none; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="ancho">
+    <img src="/logo.webp" alt="QuickMart">
+    <h1>Repartidores <small id="quien"></small></h1>
+    <button class="redondo" id="recargar" type="button" aria-label="Actualizar" hidden></button>
+    <button class="redondo" id="salir" type="button" aria-label="Cerrar sesión" hidden></button>
+  </div>
+</header>
+
+<main class="ancho">
+  <section id="acceso" class="caja" hidden>
+    <form id="formAcceso" novalidate>
+      <h2>Portal de repartidores</h2>
+      <p>Entra con el usuario y la contraseña que te dio QuickMart.</p>
+      <label>Usuario <input id="usuario" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+      <label>Contraseña <input id="clave" type="password" autocomplete="current-password"></label>
+      <p class="error" id="accesoError" role="alert"></p>
+      <button class="principal" type="submit" id="entrar">Entrar</button>
+    </form>
+  </section>
+
+  <section id="panel" hidden>
+    <div class="pestanas" role="tablist">
+      <button type="button" role="tab" data-vista="libres" aria-selected="true"><b id="nLibres">0</b>Disponibles</button>
+      <button type="button" role="tab" data-vista="mios" aria-selected="false"><b id="nMios">0</b>Mis entregas</button>
+      <button type="button" role="tab" data-vista="hechos" aria-selected="false"><b id="nHechos">0</b>Entregados</button>
+    </div>
+    <div class="lista" id="lista"></div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const pesos = (n) => "$" + (Number(n) || 0).toLocaleString("es-CL");
+const CUENTAS = { url: "https://rurxnvvfnbqrsvgapndr.supabase.co", clave: "sb_publishable_nsf17n-bNwxQ_FxwTBsKqw_j1m_0rOg" };
+const DOMINIO_REPARTO = "reparto.quickmart.cl";
+
+// --- diálogos y avisos flotantes propios ---
+const DIBUJOS = {
+  pregunta: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/>',
+  basura: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
+  alerta: '<path d="M12 3 2.5 20h19L12 3z"/><path d="M12 10v4M12 17h.01"/>',
+  candado: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+};
+// Pregunta con dos botones. Devuelve una promesa: true si acepta, false si cancela (o pulsa Esc o fuera).
+function confirmar(opciones) {
+  const o = Object.assign({ titulo: "", texto: "", destacado: "", campo: null, aceptar: "Aceptar", cancelar: "Cancelar", peligro: false, dibujo: "pregunta" }, opciones);
+  return new Promise((resolver) => {
+    const antes = document.activeElement;
+    const capa = document.createElement("div");
+    capa.className = "capa";
+    const d = document.createElement("div");
+    d.className = "dialogo" + (o.peligro ? " peligro" : "");
+    d.setAttribute("role", "alertdialog");
+    d.setAttribute("aria-modal", "true");
+    const circulo = document.createElement("div");
+    circulo.className = "circulo";
+    circulo.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + DIBUJOS[o.dibujo] + "</svg>";   // dibujo fijo del código
+    const h = document.createElement("h3");
+    h.textContent = o.titulo;
+    h.id = "dialogoTitulo";
+    d.setAttribute("aria-labelledby", h.id);
+    d.append(circulo, h);
+    if (o.destacado) { const g = document.createElement("div"); g.className = "destacado"; g.textContent = o.destacado; d.append(g); }
+    if (o.texto) { const p = document.createElement("p"); p.textContent = o.texto; d.append(p); }
+    // campo opcional (por ejemplo, para escribir un PIN): al aceptar, la promesa entrega lo escrito
+    let entrada = null;
+    if (o.campo) {
+      entrada = document.createElement("input");
+      Object.assign(entrada, o.campo);
+      entrada.className = "campoDialogo";
+      d.append(entrada);
+    }
+    const botones = document.createElement("div");
+    botones.className = "botones" + (o.cancelar ? "" : " uno");
+    const cerrar = (valor) => {
+      document.removeEventListener("keydown", teclas, true);
+      capa.remove();
+      if (antes && antes.focus) antes.focus();
+      resolver(valor);
+    };
+    const si = document.createElement("button");
+    si.type = "button"; si.className = "si"; si.textContent = o.aceptar;
+    si.onclick = () => cerrar(entrada ? entrada.value : true);
+    let no = null;
+    if (o.cancelar) {
+      no = document.createElement("button");
+      no.type = "button"; no.textContent = o.cancelar;
+      no.onclick = () => cerrar(false);
+      botones.append(no);
+    }
+    botones.append(si);
+    d.append(botones);
+    capa.append(d);
+    capa.addEventListener("mousedown", (e) => { if (e.target === capa) cerrar(false); });
+    const teclas = (e) => {
+      if (e.key === "Escape") { e.preventDefault(); cerrar(false); }
+      if (e.key === "Enter" && entrada && document.activeElement === entrada) { e.preventDefault(); cerrar(entrada.value); }
+      if (e.key === "Tab") {   // el foco no sale del diálogo
+        e.preventDefault();
+        const lista = [entrada, no, si].filter(Boolean);
+        lista[(lista.indexOf(document.activeElement) + (e.shiftKey ? lista.length - 1 : 1)) % lista.length].focus();
+      }
+    };
+    document.addEventListener("keydown", teclas, true);
+    // si hay una ficha abierta (va en la capa superior del navegador), el diálogo se pone dentro para quedar encima
+    (document.querySelector("dialog[open]") || document.body).append(capa);
+    (entrada || no || si).focus();
+  });
+}
+// Aviso breve que flota arriba y se va solo. tipo: "" | "ok" | "mal"
+function avisar(texto, tipo) {
+  let caja = document.querySelector(".avisos");
+  if (!caja) {
+    caja = document.createElement("div");
+    caja.className = "avisos";
+    caja.setAttribute("role", "status");
+    caja.setAttribute("aria-live", "polite");
+    document.body.append(caja);
+  }
+  const a = document.createElement("div");
+  a.className = "avisoFlotante" + (tipo ? " " + tipo : "");
+  a.textContent = texto;
+  caja.append(a);
+  setTimeout(() => { a.classList.add("sale"); setTimeout(() => a.remove(), 300); }, tipo === "mal" ? 6000 : 2800);
+}
+
+
+const ICONOS = {
+  recargar: '<path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5"/>',
+  salir: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3"/>',
+  casa: '<path d="M3 11l9-7 9 7M5 10v10h14V10"/>',
+  moto: '<circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M9 17h6l-3-7h4l2 7M12 10H8"/>',
+  candado: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  check: '<path d="M5 12l5 5 9-10"/>',
+  volver: '<path d="M9 14l-5-5 5-5M4 9h11a5 5 0 0 1 0 10h-3"/>',
+  doc: '<path d="M14 3H6v18h12V7l-4-4zM14 3v4h4M9 13h6M9 17h6"/>',
+};
+function icono(n) { return '<svg class="icono" viewBox="0 0 24 24" aria-hidden="true">' + ICONOS[n] + "</svg>"; }
+function crear(etiqueta, clase, texto) {
+  const el = document.createElement(etiqueta);
+  if (clase) el.className = clase;
+  if (texto !== undefined) el.textContent = texto;
+  return el;
+}
+function boton(clase, dibujo, texto, alHacerClic) {
+  const b = crear("button", clase);
+  b.type = "button";
+  b.innerHTML = icono(dibujo);           // dibujo fijo del código
+  b.append(document.createTextNode(texto));
+  b.onclick = async () => { b.disabled = true; try { await alHacerClic(); } finally { b.disabled = false; } };
+  return b;
+}
+$("recargar").innerHTML = icono("recargar");
+$("salir").innerHTML = icono("salir");
+
+// sesión propia del portal (no se mezcla con la cuenta de cliente de la tienda en el mismo teléfono)
+const nube = supabase.createClient(CUENTAS.url, CUENTAS.clave, { auth: { storageKey: "quickmart-reparto", persistSession: true } });
+let pedidos = [], vista = "libres", reloj = null;
+
+function verAcceso(mensaje) {
+  $("panel").hidden = true; $("recargar").hidden = true; $("salir").hidden = true;
+  $("acceso").hidden = false; $("quien").textContent = "";
+  $("accesoError").textContent = mensaje || "";
+  clearInterval(reloj);
+}
+$("formAcceso").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const usuario = $("usuario").value.trim().toLowerCase();
+  const clave = $("clave").value;
+  if (!usuario || !clave) { $("accesoError").textContent = "Escribe tu usuario y contraseña."; return; }
+  $("entrar").disabled = true;
+  $("accesoError").textContent = "";
+  const correo = usuario.includes("@") ? usuario : usuario + "@" + DOMINIO_REPARTO;
+  const { error } = await nube.auth.signInWithPassword({ email: correo, password: clave });
+  $("entrar").disabled = false;
+  if (error) {
+    $("accesoError").textContent = /banned/i.test(error.message || "") ? "Tu cuenta está desactivada. Habla con QuickMart."
+      : "Usuario o contraseña incorrectos.";
+    return;
+  }
+  $("clave").value = "";
+  iniciar();
+});
+$("salir").onclick = async () => {
+  if (!(await confirmar({ titulo: "¿Cerrar sesión?", aceptar: "Salir", cancelar: "Cancelar", dibujo: "pregunta" }))) return;
+  await nube.auth.signOut();
+  verAcceso();
+};
+
+async function iniciar() {
+  const { data } = await nube.auth.getSession();
+  if (!data.session) return verAcceso();
+  const r = await nube.rpc("es_repartidor");
+  if (r.data !== true) {
+    await nube.auth.signOut();
+    return verAcceso("Esta cuenta no es de repartidor o está desactivada.");
+  }
+  $("quien").textContent = (data.session.user.user_metadata && data.session.user.user_metadata.nombre) || "";
+  $("acceso").hidden = true; $("panel").hidden = false; $("recargar").hidden = false; $("salir").hidden = false;
+  await cargar();
+  clearInterval(reloj);
+  reloj = setInterval(() => { if (!document.hidden) cargar(true); }, 30000);
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && !$("panel").hidden) cargar(true); });
+$("recargar").onclick = () => cargar();
+
+async function cargar(silencioso) {
+  if (!silencioso) $("recargar").classList.add("gira");
+  const { data, error } = await nube.rpc("reparto_pedidos");
+  $("recargar").classList.remove("gira");
+  if (error) {
+    if (/JWT|token|401/i.test(error.message || "")) return verAcceso("Tu sesión venció. Vuelve a entrar.");
+    if (!silencioso) avisar("No se pudieron cargar los pedidos", "mal");
+    return;
+  }
+  const antes = new Set(pedidos.filter((p) => p.estado === "nuevo").map((p) => p.id));
+  pedidos = Array.isArray(data) ? data : [];
+  const nuevos = pedidos.filter((p) => p.estado === "nuevo" && !antes.has(p.id));
+  if (silencioso && nuevos.length && navigator.vibrate) navigator.vibrate(200);
+  if (silencioso && nuevos.length) avisar(nuevos.length === 1 ? "Llegó un pedido nuevo" : "Llegaron " + nuevos.length + " pedidos nuevos", "ok");
+  pintar();
+}
+
+const grupos = {
+  libres: (p) => p.estado === "nuevo",
+  mios: (p) => p.mio && p.estado === "en camino",
+  hechos: (p) => p.mio && p.estado === "entregado",
+};
+document.querySelectorAll(".pestanas button").forEach((b) => {
+  b.onclick = () => { vista = b.dataset.vista; pintar(); window.scrollTo({ top: 0 }); };
+});
+
+function hora(t) { return t ? new Date(t).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }) : ""; }
+
+function pintar() {
+  $("nLibres").textContent = pedidos.filter(grupos.libres).length;
+  $("nMios").textContent = pedidos.filter(grupos.mios).length;
+  $("nHechos").textContent = pedidos.filter(grupos.hechos).length;
+  document.querySelectorAll(".pestanas button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.vista === vista)));
+  const lista = pedidos.filter(grupos[vista]);
+  if (!lista.length) {
+    $("lista").replaceChildren(crear("p", "vacio", { libres: "No hay pedidos esperando. Se actualiza solo cada 30 segundos.",
+      mios: "No tienes entregas en camino. Toma un pedido en Disponibles.", hechos: "Aún no entregas pedidos hoy." }[vista]));
+    return;
+  }
+  $("lista").replaceChildren(...lista.map(tarjeta));
+}
+
+function tarjeta(p) {
+  const c = crear("article", "ped " + p.estado.replace(" ", "-"));
+  const cab = crear("div", "cabeza");
+  cab.append(crear("span", "codigo", p.codigo ? "N° " + p.codigo : "Pedido " + p.id),
+    crear("span", "hora", p.estado === "entregado" ? "Entregado " + hora(p.entregado_en) : "Pedido " + hora(p.creado)));
+  const destino = crear("div", "destino");
+  destino.innerHTML = icono("casa");
+  destino.append(document.createTextNode([p.edificio, p.depto ? "depto " + p.depto : ""].filter(Boolean).join(", ") || "Sin dirección"));
+  c.append(cab, destino, crear("div", "cliente", p.nombre || ""));
+  const ul = crear("ul");
+  (Array.isArray(p.items) ? p.items : []).forEach((i) => ul.append(crear("li", "", i.texto || i.n + " × " + i.nombre)));
+  if (p.otros) ul.append(crear("li", "", "Otros: " + p.otros));
+  c.append(ul);
+  const fila = crear("div", "fila");
+  fila.append(crear("span", "", "Total " + pesos(p.total)), crear("span", "", p.pago || ""));
+  c.append(fila);
+  if (p.comprobante && /^https:\/\/[a-z0-9]+\.supabase\.co\//.test(p.comprobante)) {
+    const a = crear("a", "nota");
+    a.href = p.comprobante; a.target = "_blank"; a.rel = "noopener";
+    a.innerHTML = icono("doc"); a.append(document.createTextNode("Ver comprobante de transferencia"));
+    c.append(a);
+  }
+  if (p.estado === "en camino" && p.tiene_pin) {
+    const n = crear("div", "nota" + (p.pin_intentos ? " alerta" : ""));
+    n.innerHTML = icono("candado");
+    n.append(document.createTextNode("Pide al cliente su PIN de 4 números" + (p.pin_intentos ? " · " + p.pin_intentos + " intento(s) fallido(s)" : "")));
+    c.append(n);
+  }
+
+  const acc = crear("div", "acciones");
+  if (p.estado === "nuevo") {
+    acc.classList.add("uno");
+    acc.append(boton("principal", "moto", "Tomar pedido", () => tomar(p)));
+  } else if (p.estado === "en camino") {
+    acc.append(p.tiene_pin ? boton("principal verde", "candado", "Entregar con PIN", () => entregar(p))
+      : boton("principal verde", "check", "Marcar entregado", () => entregarSinPin(p)));
+    acc.append(boton("secundario", "volver", "Soltar", () => soltar(p)));
+  }
+  if (acc.childNodes.length) c.append(acc);
+  return c;
+}
+
+async function tomar(p) {
+  const { data, error } = await nube.rpc("tomar_pedido", { p_id: p.id });
+  if (error) { avisar("No se pudo tomar el pedido", "mal"); return; }
+  if (data === "ok") { avisar("Pedido tomado. Está en Mis entregas", "ok"); vista = "mios"; }
+  else avisar("Otro repartidor tomó este pedido", "mal");
+  await cargar(true);
+}
+async function soltar(p) {
+  const ok = await confirmar({ titulo: "¿Soltar este pedido?", texto: "Vuelve a Disponibles para que otro repartidor lo tome.",
+    aceptar: "Soltar", cancelar: "Cancelar", peligro: true, dibujo: "alerta" });
+  if (!ok) return;
+  const { data, error } = await nube.rpc("soltar_pedido", { p_id: p.id });
+  if (error || data !== "ok") avisar("No se pudo soltar el pedido", "mal"); else avisar("Pedido devuelto a Disponibles");
+  await cargar(true);
+}
+async function entregar(p) {
+  const pin = await confirmar({
+    titulo: "PIN de entrega", texto: "Pídele al cliente del pedido " + (p.codigo || "") + " su PIN de 4 números.",
+    campo: { type: "text", inputMode: "numeric", maxLength: 4, autocomplete: "off", placeholder: "••••", ariaLabel: "PIN de entrega" },
+    aceptar: "Confirmar entrega", cancelar: "Cancelar", dibujo: "candado",
+  });
+  if (pin === false) return;
+  if (!/^\d{4}$/.test(String(pin).trim())) { avisar("El PIN tiene 4 números", "mal"); return; }
+  const { data, error } = await nube.rpc("confirmar_entrega", { p_id: p.id, p_pin: String(pin).trim() });
+  if (error) { avisar("No se pudo confirmar la entrega", "mal"); return; }
+  if (data === "ok") { avisar("Entregado ✓", "ok"); await cargar(true); return; }
+  const quedan = Math.max(0, 5 - ((p.pin_intentos || 0) + 1));
+  avisar({
+    incorrecto: "PIN incorrecto. " + (quedan ? "Quedan " + quedan + " intentos." : "El pedido quedó bloqueado: avisa a QuickMart."),
+    bloqueado: "Pedido bloqueado por 5 PIN incorrectos. Avisa a QuickMart.",
+    ya_entregado: "Este pedido ya estaba entregado.",
+    cancelado: "Este pedido fue cancelado.",
+    no_es_tuyo: "Este pedido ya no está a tu nombre.",
+  }[data] || "No se pudo confirmar la entrega", "mal");
+  await cargar(true);
+}
+async function entregarSinPin(p) {
+  const ok = await confirmar({ titulo: "¿Marcar como entregado?", texto: "Este pedido no tiene PIN. Confirma solo si lo entregaste en " +
+    [p.edificio, p.depto ? "depto " + p.depto : ""].filter(Boolean).join(", ") + ".", aceptar: "Entregado", cancelar: "Cancelar", dibujo: "pregunta" });
+  if (!ok) return;
+  const { data, error } = await nube.rpc("entregar_sin_pin", { p_id: p.id });
+  if (error || data !== "ok") avisar("No se pudo marcar como entregado", "mal"); else avisar("Entregado ✓", "ok");
+  await cargar(true);
+}
+
+iniciar().catch(() => verAcceso("No se pudo conectar. Revisa tu internet."));
+</script>
+</body>
+</html>

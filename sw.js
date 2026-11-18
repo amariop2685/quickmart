@@ -13,7 +13,7 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   // Solo la tienda: ni la administración ni otros sitios (cuentas, WhatsApp) pasan por aquí.
-  if (e.request.method !== "GET" || url.origin !== location.origin || url.pathname.includes("/admin")) return;
+  if (e.request.method !== "GET" || url.origin !== location.origin || url.pathname.includes("/admin") || url.pathname.includes("/reparto")) return;
   e.respondWith(
     fetch(e.request)
       .then((r) => {

@@ -23,7 +23,7 @@
   #estado { font-size: .9rem; font-weight: 600; color: var(--suave); min-width: 9em; text-align: right; }
   #estado.ok { color: var(--ok); } #estado.mal { color: var(--rojo); }
 
-  .pestanas { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 16px 0; }
+  .pestanas { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 16px 0; }
   @media (max-width: 620px) { .pestanas { grid-template-columns: repeat(3, 1fr); } }
   /* Pedidos */
   .filtroPedidos { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
@@ -40,7 +40,18 @@
   .pedidoAdm .meta { color: var(--suave); font-size: .9rem; }
   .pedidoAdm .total { font-weight: 700; }
   .pedidoAdm .descontado { font-size: .85rem; color: #17663a; font-weight: 600; }
-  .accesoPedidos { display: grid; gap: 10px; max-width: 420px; }
+  .repLinea { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: .92rem; font-weight: 600; }
+  .repLinea select { width: auto; padding: 6px 10px; font-size: .9rem; }
+  .portalRep { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .portalRep div { flex: 1; min-width: 220px; }
+  .portalRep b { display: block; }
+  .portalRep code { font-size: .95rem; }
+  .portalRep a, .portalRep button { font: inherit; font-weight: 700; font-size: .9rem; cursor: pointer; border-radius: 10px; padding: 8px 12px;
+    background: #fff; color: var(--texto); border: 1px solid var(--borde); text-decoration: none; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .chip { font-size: .78rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--claro); color: var(--suave); }
+  .chip.si { background: #e7f5ec; color: #17663a; } .chip.no { background: #fde8e9; color: #b00812; }
+  .item.apagado .nombre { color: var(--suave); }
   .item .banner { flex: none; width: 128px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--claro); }
   .item .campos { flex: 1; min-width: 180px; display: grid; gap: 6px; }
   .pestanas button { font: inherit; font-weight: 700; cursor: pointer; padding: 11px 6px;
@@ -128,7 +139,7 @@
   .dialogo.peligro .circulo { background: #fde8e9; color: #d90b16; }
   .dialogo .circulo svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .dialogo h3 { margin: 0 0 6px; font-size: 1.15rem; font-weight: 700; }
-  .dialogo p { margin: 0; color: #5b6482; font-size: .95rem; font-weight: 400; }
+  .dialogo p { margin: 0; color: #5b6482; font-size: .95rem; font-weight: 400; white-space: pre-line; }
   .dialogo .destacado { font: 700 2.4rem/1.1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: .25em; margin: 8px 0 10px; color: #0b1a4a; }
   .dialogo .campoDialogo { width: 100%; margin-top: 14px; text-align: center; font: 700 1.6rem ui-monospace, Menlo, monospace; letter-spacing: .3em; padding: 10px; border: 2px solid #0b1a4a; border-radius: 12px; }
   .dialogo .botones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
@@ -195,6 +206,7 @@
 <main class="ancho" id="panel" hidden>
   <div class="pestanas" role="tablist">
     <button type="button" role="tab" data-vista="pedidos" aria-selected="false">Pedidos</button>
+    <button type="button" role="tab" data-vista="repartidores" aria-selected="false">Repartidores</button>
     <button type="button" role="tab" data-vista="productos" aria-selected="true">Productos</button>
     <button type="button" role="tab" data-vista="servicios" aria-selected="false">Servicios</button>
     <button type="button" role="tab" data-vista="banners" aria-selected="false">Banners</button>
@@ -220,26 +232,27 @@
   </section>
 
   <section id="v-pedidos" hidden>
-    <div class="accesoPedidos caja" id="pedAcceso" hidden>
-      <b>Entra con tu cuenta de QuickMart para ver los pedidos</b>
-      <label>Correo <input id="pedCorreo" type="email" autocomplete="email"></label>
-      <label>Contraseña <small>Si no tienes, usa “Recibir código”.</small><input id="pedClave" type="password" autocomplete="current-password"></label>
-      <label id="pedCodigoCaja" hidden>Código del correo <input id="pedCodigo" inputmode="numeric" autocomplete="one-time-code"></label>
-      <p class="error" id="pedAccesoError" role="alert"></p>
-      <div class="botones" style="justify-content:flex-start">
-        <button class="principal" type="button" id="pedEntrar">Entrar</button>
-        <button class="secundario" type="button" id="pedPedirCodigo">Recibir código</button>
-      </div>
+    <p class="caja error" id="pedMensaje" hidden></p>
+    <div class="barra">
+      <div class="filtroPedidos" id="pedFiltros"></div>
+      <button class="secundario" type="button" id="pedRecargar">Actualizar</button>
     </div>
-    <p class="caja" id="pedNoAdmin" hidden></p>
-    <div id="pedPanel" hidden>
-      <div class="barra">
-        <div class="filtroPedidos" id="pedFiltros"></div>
-        <button class="secundario" type="button" id="pedRecargar">Actualizar</button>
-      </div>
-      <p class="cuenta" id="pedCuenta"></p>
-      <div class="lista" id="listaPedidos"></div>
+    <p class="cuenta" id="pedCuenta"></p>
+    <div class="lista" id="listaPedidos"></div>
+  </section>
+
+  <section id="v-repartidores" hidden>
+    <div class="caja portalRep">
+      <div><b>Portal de repartidores</b><code id="repEnlace"></code></div>
+      <button type="button" id="repCopiar">Copiar enlace</button>
+      <a href="/reparto/" target="_blank" rel="noopener">Abrir</a>
     </div>
+    <p class="caja error" id="repMensaje" hidden></p>
+    <div class="barra">
+      <span style="flex:1" class="cuenta" id="repCuenta">Cada repartidor entra con su usuario y contraseña, toma pedidos y los entrega con el PIN del cliente.</span>
+      <button class="principal" id="nuevoRepartidor" type="button">+ Agregar repartidor</button>
+    </div>
+    <div class="lista" id="listaRepartidores"></div>
   </section>
 
   <section id="v-banners" hidden>
@@ -380,6 +393,28 @@
     <div class="botones">
       <button class="secundario" type="button" data-cerrar>Cancelar</button>
       <button class="principal" type="submit">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgRepartidor">
+  <h2 id="tituloRepartidor">Repartidor</h2>
+  <form class="ficha" id="formRepartidor" novalidate>
+    <div id="rCamposDatos" class="dos">
+      <label>Nombre <input id="rNombre" autocomplete="off"></label>
+      <label>Teléfono <small>Opcional</small><input id="rTelefono" type="tel" inputmode="tel" autocomplete="off"></label>
+    </div>
+    <label id="rCampoUsuario">Usuario <small>Con esto entra al portal. Sin espacios ni tildes.</small>
+      <input id="rUsuario" autocomplete="off" autocapitalize="none" spellcheck="false"></label>
+    <div id="rCampoClave">
+      <label>Contraseña <small>Mínimo 8 caracteres. Se genera una al azar; puedes cambiarla.</small>
+        <input id="rClave" autocomplete="new-password" spellcheck="false"></label>
+      <button class="secundario" type="button" id="rGenerar" style="margin-top:8px">Generar otra</button>
+    </div>
+    <p class="error" id="rError" role="alert"></p>
+    <div class="botones">
+      <button class="secundario" type="button" data-cerrar>Cancelar</button>
+      <button class="principal" type="submit" id="rGuardar">Guardar</button>
     </div>
   </form>
 </dialog>
@@ -639,8 +674,9 @@ document.querySelectorAll(".pestanas button").forEach((b) => {
   b.onclick = () => {
     document.querySelectorAll(".pestanas button").forEach((x) =>
       x.setAttribute("aria-selected", String(x === b)));
-    ["pedidos", "productos", "servicios", "banners", "negocio"].forEach((v) => { $("v-" + v).hidden = v !== b.dataset.vista; });
+    ["pedidos", "repartidores", "productos", "servicios", "banners", "negocio"].forEach((v) => { $("v-" + v).hidden = v !== b.dataset.vista; });
     if (b.dataset.vista === "pedidos") abrirPedidos();
+    if (b.dataset.vista === "repartidores") abrirRepartidores();
   };
 });
 document.querySelectorAll("[data-cerrar]").forEach((b) => { b.onclick = () => b.closest("dialog").close(); });
@@ -1050,83 +1086,102 @@ $("nuevoProducto").onclick = () => abrirProducto(null);
 $("nuevoServicio").onclick = () => abrirServicio(null);
 
 
-// --- pedidos (Supabase): estado de cada pedido y descuento de stock al entregarlo ---
-const CUENTAS = { url: "https://rurxnvvfnbqrsvgapndr.supabase.co", clave: "sb_publishable_nsf17n-bNwxQ_FxwTBsKqw_j1m_0rOg" };
+// --- pedidos y repartidores ---
+// Pasan por la función de servidor admin-quickmart, que comprueba la misma clave con la que entraste aquí:
+// no hay que escribir otra contraseña para ver los pedidos.
+const FUNCION_ADMIN = "https://rurxnvvfnbqrsvgapndr.supabase.co/functions/v1/admin-quickmart";
+const CLAVE_PUBLICA = "sb_publishable_nsf17n-bNwxQ_FxwTBsKqw_j1m_0rOg";
+const PORTAL_REPARTO = "https://quickmart.cl/reparto/";
 const ESTADOS = ["nuevo", "en camino", "entregado", "cancelado"];
 const NOMBRE_ESTADO = { nuevo: "Nuevo", "en camino": "En camino", entregado: "Entregado", cancelado: "Cancelado" };
-let nube = null, esAdmin = false, filtroPed = "nuevo", pedidos = [];
-// columnas que la administración puede leer (el PIN cifrado y la IP no se pueden leer desde la página)
-const COLUMNAS = "id, user_id, creado, nombre, edificio, depto, pago, otros, items, subtotal, despacho, total, codigo, comprobante, estado, stock_descontado, tiene_pin, pin_intentos";
+let filtroPed = "nuevo", pedidos = [], repartidores = [], pedidosListos = false, relojPed = null;
 
-function cargarSupabase() {
-  if (window.supabase) return Promise.resolve();
-  return new Promise((ok, mal) => {
-    const sc = document.createElement("script");
-    sc.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
-    sc.onload = ok; sc.onerror = () => mal(new Error("No se pudo cargar el servicio de pedidos."));
-    document.head.append(sc);
+async function api(accion, extra) {
+  const r = await fetch(FUNCION_ADMIN, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: CLAVE_PUBLICA, "x-admin-token": token },
+    body: JSON.stringify(Object.assign({ accion }, extra || {})),
   });
-}
-function verPedidos(cual) {
-  $("pedAcceso").hidden = cual !== "acceso";
-  $("pedNoAdmin").hidden = cual !== "noadmin";
-  $("pedPanel").hidden = cual !== "panel";
-}
-async function abrirPedidos() {
-  try {
-    await cargarSupabase();
-    if (!nube) nube = window.supabase.createClient(CUENTAS.url, CUENTAS.clave);
-    const { data } = await nube.auth.getSession();
-    if (!data.session) { verPedidos("acceso"); return; }
-    const r = await nube.rpc("es_admin");
-    esAdmin = r.data === true;
-    if (!esAdmin) {
-      $("pedNoAdmin").textContent = "La cuenta " + data.session.user.email + " no es administradora. " +
-        "Corre en Supabase el archivo supabase-pedidos-admin.sql con tu correo y vuelve a abrir esta pestaña.";
-      verPedidos("noadmin");
-      return;
-    }
-    verPedidos("panel");
-    await cargarPedidos();
-    revisarRed();
-  } catch (e) {
-    $("pedNoAdmin").textContent = e.message || "No se pudieron cargar los pedidos.";
-    verPedidos("noadmin");
+  let cuerpo = {};
+  try { cuerpo = await r.json(); } catch (e) { /* sin cuerpo */ }
+  if (!r.ok) {
+    const error = new Error(cuerpo.error || (r.status === 404 ? "Falta crear la función admin-quickmart en Supabase." : "No se pudo conectar con el servidor de pedidos."));
+    error.status = r.status;
+    throw error;
   }
+  return cuerpo;
 }
-$("pedEntrar").onclick = async () => {
-  const correo = $("pedCorreo").value.trim().toLowerCase();
-  $("pedAccesoError").textContent = "";
-  if (!correo) { $("pedAccesoError").textContent = "Escribe tu correo."; return; }
-  let r;
-  if (!$("pedCodigoCaja").hidden && $("pedCodigo").value.trim()) {
-    r = await nube.auth.verifyOtp({ email: correo, token: $("pedCodigo").value.replace(/\D/g, ""), type: "email" });
-  } else {
-    if (!$("pedClave").value) { $("pedAccesoError").textContent = "Escribe tu contraseña o pide un código."; return; }
-    r = await nube.auth.signInWithPassword({ email: correo, password: $("pedClave").value });
-  }
-  if (r.error) { $("pedAccesoError").textContent = "No se pudo entrar: revisa el correo, la contraseña o el código."; return; }
-  abrirPedidos();
-};
-$("pedPedirCodigo").onclick = async () => {
-  const correo = $("pedCorreo").value.trim().toLowerCase();
-  if (!correo) { $("pedAccesoError").textContent = "Escribe tu correo."; return; }
-  const r = await nube.auth.signInWithOtp({ email: correo, options: { shouldCreateUser: false } });
-  if (r.error) { $("pedAccesoError").textContent = "No se pudo enviar el código. Espera un minuto y prueba de nuevo."; return; }
-  $("pedCodigoCaja").hidden = false;
-  $("pedAccesoError").textContent = "";
-  avisar("Te enviamos un código al correo", "ok");
-  $("pedCodigo").focus();
-};
+function sinServidor() {
+  if (!LOCAL && token) return false;
+  $("pedMensaje").textContent = "Los pedidos y repartidores se ven en quickmart.cl/admin.";
+  $("pedMensaje").hidden = false;
+  return true;
+}
+const nombreRep = (idRep) => { const r = repartidores.find((x) => x.user_id === idRep); return r ? r.nombre : "Repartidor eliminado"; };
+const hora = (t) => (t ? new Date(t).toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }) : "");
+
+function abrirPedidos() {
+  if (sinServidor()) return;
+  cargarPedidos();
+  clearInterval(relojPed);   // mientras miras Pedidos o Repartidores, se actualiza solo cada minuto
+  relojPed = setInterval(() => {
+    if (document.hidden || ($("v-pedidos").hidden && $("v-repartidores").hidden)) return;
+    cargarPedidos(true);
+  }, 60000);
+}
 $("pedRecargar").onclick = () => cargarPedidos();
 
-async function cargarPedidos() {
-  $("listaPedidos").replaceChildren(crear("p", "vacio", "Cargando…"));
-  const { data, error } = await nube.from("pedidos").select(COLUMNAS).order("creado", { ascending: false }).limit(200);
-  if (error) { $("listaPedidos").replaceChildren(crear("p", "vacio", "No se pudieron cargar los pedidos.")); return; }
-  pedidos = data;
+async function cargarPedidos(silencioso) {
+  if (!silencioso && !pedidosListos) $("listaPedidos").replaceChildren(crear("p", "vacio", "Cargando…"));
+  let r;
+  try { r = await api("pedidos"); } catch (e) {
+    if (!silencioso) {
+      $("pedMensaje").textContent = e.message; $("pedMensaje").hidden = false;
+      $("listaPedidos").replaceChildren();
+    }
+    return;
+  }
+  $("pedMensaje").hidden = true;
+  const antes = new Set(pedidos.map((p) => p.id));
+  const llegaron = pedidosListos ? r.pedidos.filter((p) => !antes.has(p.id)).length : 0;
+  pedidos = r.pedidos || [];
+  repartidores = r.repartidores || [];
+  pedidosListos = true;
+  if (llegaron) avisar(llegaron === 1 ? "Llegó un pedido nuevo" : "Llegaron " + llegaron + " pedidos nuevos", "ok");
+  await sincronizarStock();
   pintarPedidos();
+  pintarRepartidores();
 }
+
+// Pedidos entregados (por ti o por un repartidor) cuyo stock aún no se descuenta: se descuentan todos juntos.
+let sincronizando = false;
+async function sincronizarStock() {
+  if (sincronizando) return;
+  const pendientes = pedidos.filter((p) => p.estado === "entregado" && !p.stock_descontado);
+  if (!pendientes.length) return;
+  sincronizando = true;
+  try {
+    const tomados = [];
+    for (const p of pendientes) {   // la marca se toma primero, para no descontar dos veces
+      try {
+        const r = await api("actualizar", { id: p.id, cambios: { stock_descontado: true }, si: { stock_descontado: false, estado: "entregado" } });
+        if (r.filas && r.filas.length) { Object.assign(p, r.filas[0]); tomados.push(p); }
+      } catch (e) { /* lo intenta la próxima vez */ }
+    }
+    const cambiados = tomados.reduce((s, p) => s + moverStock(p, -1), 0);
+    if (!cambiados) return;
+    if (await guardar()) {
+      pintarProductos();
+      avisar("Stock descontado de " + tomados.length + (tomados.length === 1 ? " pedido entregado" : " pedidos entregados"), "ok");
+      return;
+    }
+    tomados.forEach((p) => moverStock(p, 1));
+    for (const p of tomados) {
+      try { await api("actualizar", { id: p.id, cambios: { stock_descontado: false } }); p.stock_descontado = false; } catch (e) { /* queda marcado */ }
+    }
+  } finally { sincronizando = false; }
+}
+
 function pintarPedidos() {
   const cuenta = (e) => pedidos.filter((x) => e === "todos" || x.estado === e).length;
   $("pedFiltros").replaceChildren(...["nuevo", "en camino", "entregado", "cancelado", "todos"].map((e) => {
@@ -1135,7 +1190,7 @@ function pintarPedidos() {
     return b;
   }));
   const lista = pedidos.filter((x) => filtroPed === "todos" || x.estado === filtroPed);
-  $("pedCuenta").textContent = "Para marcar Entregado pide al cliente su PIN de 4 números. Al entregarlo se descuenta el stock; si lo cambias de nuevo, se devuelve." + (textoRed ? " " + textoRed : "");
+  $("pedCuenta").textContent = "Se actualiza solo cada minuto. Los entregados con PIN (por ti o por un repartidor) descuentan el stock al abrir esta administración.";
   if (!lista.length) { $("listaPedidos").replaceChildren(crear("p", "vacio", "No hay pedidos aquí.")); return; }
   $("listaPedidos").replaceChildren(...lista.map((ped) => {
     const c = crear("div", "pedidoAdm " + (ped.estado || "nuevo").replace(" ", "-"));
@@ -1163,6 +1218,34 @@ function pintarPedidos() {
       const a = crear("a", "", "Ver comprobante");
       a.href = ped.comprobante; a.target = "_blank"; a.rel = "noopener";
       c.append(a);
+    }
+    // repartidor: quién lo lleva, y se puede asignar o cambiar mientras no esté entregado
+    if (ped.repartidor_id || ped.estado === "nuevo" || ped.estado === "en camino") {
+      const fila = crear("div", "repLinea");
+      fila.append(crear("span", "", ped.repartidor_id
+        ? "🛵 " + nombreRep(ped.repartidor_id) + (ped.tomado ? " · tomado " + hora(ped.tomado) : "") + (ped.entregado_en ? " · entregado " + hora(ped.entregado_en) : "")
+        : "🛵 Sin repartidor"));
+      if ((ped.estado === "nuevo" || ped.estado === "en camino") && repartidores.length) {
+        const asignar = crear("select");
+        asignar.setAttribute("aria-label", "Repartidor del pedido " + (ped.codigo || ""));
+        asignar.append(new Option("Sin repartidor", ""), ...repartidores.filter((r) => r.activo || r.user_id === ped.repartidor_id).map((r) => new Option(r.nombre, r.user_id)));
+        asignar.value = ped.repartidor_id || "";
+        asignar.onchange = async () => {
+          asignar.disabled = true;
+          const v = asignar.value;
+          const cambios = { repartidor_id: v || null };
+          if (v && ped.estado === "nuevo") cambios.estado = "en camino";
+          if (!v && ped.estado === "en camino") cambios.estado = "nuevo";
+          try {
+            const r = await api("actualizar", { id: ped.id, cambios });
+            if (r.filas && r.filas[0]) Object.assign(ped, r.filas[0]);
+            avisar(v ? "Pedido asignado a " + nombreRep(v) : "Pedido sin repartidor", "ok");
+          } catch (e) { avisar(e.message, "mal"); }
+          pintarPedidos();
+        };
+        fila.append(asignar);
+      }
+      c.append(fila);
     }
     if (ped.tiene_pin && ped.estado !== "entregado") {
       c.append(crear("div", "meta", "🔒 Se entrega con PIN" + (ped.pin_intentos ? " · " + ped.pin_intentos + " intento" + (ped.pin_intentos === 1 ? "" : "s") + " fallido" + (ped.pin_intentos === 1 ? "" : "s") : "")));
@@ -1195,17 +1278,6 @@ function moverStock(ped, signo) {
   return cambiados;
 }
 
-// Cambia el estado. Entrar a "entregado" descuenta el stock; salir de "entregado" lo devuelve.
-// La marca stock_descontado se cambia primero y en una sola operación, para no descontar dos veces.
-// Qué datos de red llegan a la base (para saber si el filtro de Chile y el límite por IP funcionan).
-let textoRed = "";
-async function revisarRed() {
-  const { data, error } = await nube.rpc("diagnostico_red");
-  if (error || !data) return;
-  textoRed = "Protección: país detectado " + (data.pais || "no disponible") + " · IP " + (data.ip ? "detectada" : "no disponible") + ".";
-  pintarPedidos();
-}
-
 // Entrega con PIN: el cliente lo dicta, la base lo comprueba y recién ahí el pedido queda entregado.
 async function entregarConPin(ped) {
   const pin = await confirmar({
@@ -1215,8 +1287,8 @@ async function entregarConPin(ped) {
   });
   if (pin === false) return false;
   if (!/^\d{4}$/.test(String(pin).trim())) { avisar("El PIN tiene 4 números", "mal"); return false; }
-  const { data, error } = await nube.rpc("confirmar_entrega", { p_id: ped.id, p_pin: String(pin).trim() });
-  if (error) { avisar("No se pudo confirmar la entrega", "mal"); return false; }
+  let data;
+  try { data = (await api("pin", { id: ped.id, pin: String(pin).trim() })).resultado; } catch (e) { avisar(e.message, "mal"); return false; }
   if (data !== "ok") {
     if (data === "incorrecto") ped.pin_intentos = (ped.pin_intentos || 0) + 1;
     const quedan = Math.max(0, 5 - (ped.pin_intentos || 0));
@@ -1224,9 +1296,10 @@ async function entregarConPin(ped) {
       incorrecto: "PIN incorrecto. " + (quedan ? "Quedan " + quedan + " intentos." : "El pedido quedó bloqueado."),
       bloqueado: "Pedido bloqueado por 5 PIN incorrectos. Desbloquéalo en Supabase (ver el archivo SQL).",
       ya_entregado: "Este pedido ya estaba entregado.",
+      cancelado: "Este pedido está cancelado.",
       no_existe: "El pedido ya no existe.",
     }[data] || "No se pudo confirmar la entrega", "mal");
-    if (data === "ya_entregado") await cargarPedidos();
+    if (data === "ya_entregado") await cargarPedidos(true);
     return false;
   }
   ped.estado = "entregado";
@@ -1236,10 +1309,10 @@ async function entregarConPin(ped) {
 
 // Descuenta el stock de un pedido ya entregado. La marca se toma primero para no descontar dos veces.
 async function descontarStock(ped) {
-  const { data, error } = await nube.from("pedidos").update({ stock_descontado: true })
-    .eq("id", ped.id).eq("stock_descontado", false).select(COLUMNAS);
-  if (error || !data || !data.length) { await cargarPedidos(); return; }
-  Object.assign(ped, data[0]);
+  let filas = [];
+  try { filas = (await api("actualizar", { id: ped.id, cambios: { stock_descontado: true }, si: { stock_descontado: false } })).filas || []; } catch (e) { /* abajo */ }
+  if (!filas.length) { await cargarPedidos(true); return; }
+  Object.assign(ped, filas[0]);
   const n = moverStock(ped, -1);
   if (n === 0) { avisar("Entregado ✓ (sus productos no llevan stock)", "ok"); return; }
   if (await guardar()) {
@@ -1248,23 +1321,26 @@ async function descontarStock(ped) {
     return;
   }
   moverStock(ped, 1);
-  await nube.from("pedidos").update({ stock_descontado: false }).eq("id", ped.id);
+  try { await api("actualizar", { id: ped.id, cambios: { stock_descontado: false } }); } catch (e) { /* queda marcado */ }
   ped.stock_descontado = false;
   avisar("Entregado, pero no se pudo descontar el stock. Usa “Descontar stock”.", "mal");
 }
 
+// Cambia el estado. Entrar a "entregado" descuenta el stock; salir de "entregado" lo devuelve.
 async function cambiarEstado(ped, nuevo) {
   if (nuevo === "entregado" && ped.estado !== "entregado" && ped.tiene_pin) return entregarConPin(ped);
   const descontar = nuevo === "entregado" && !ped.stock_descontado;
   const devolver = nuevo !== "entregado" && ped.stock_descontado;
-  let q = nube.from("pedidos").update({ estado: nuevo, stock_descontado: nuevo === "entregado" ? true : (devolver ? false : ped.stock_descontado) }).eq("id", ped.id);
-  if (descontar) q = q.eq("stock_descontado", false);
-  if (devolver) q = q.eq("stock_descontado", true);
-  const { data, error } = await q.select(COLUMNAS);
-  if (error) { avisar("No se pudo cambiar el estado", "mal"); return false; }
-  if (!data || !data.length) { avisar("El pedido cambió en otra pantalla. Actualizando…"); await cargarPedidos(); return false; }
+  const cambios = { estado: nuevo, stock_descontado: nuevo === "entregado" ? true : (devolver ? false : ped.stock_descontado) };
+  if (nuevo === "nuevo") cambios.repartidor_id = null;   // vuelve a quedar libre para los repartidores
+  const si = {};
+  if (descontar) si.stock_descontado = false;
+  if (devolver) si.stock_descontado = true;
+  let filas;
+  try { filas = (await api("actualizar", { id: ped.id, cambios, si })).filas || []; } catch (e) { avisar(e.message || "No se pudo cambiar el estado", "mal"); return false; }
+  if (!filas.length) { avisar("El pedido cambió en otra pantalla. Actualizando…"); await cargarPedidos(true); return false; }
   const anterior = { estado: ped.estado, stock_descontado: ped.stock_descontado };
-  Object.assign(ped, data[0]);
+  Object.assign(ped, filas[0]);
   if (!descontar && !devolver) { avisar("Pedido " + NOMBRE_ESTADO[nuevo].toLowerCase(), "ok"); return true; }
 
   const cambiados = moverStock(ped, descontar ? -1 : 1);
@@ -1276,9 +1352,129 @@ async function cambiarEstado(ped, nuevo) {
   }
   // no se pudo guardar el catálogo: se deshace todo para que stock y estado sigan cuadrando
   moverStock(ped, descontar ? 1 : -1);
-  await nube.from("pedidos").update(anterior).eq("id", ped.id);
+  try { await api("actualizar", { id: ped.id, cambios: anterior }); } catch (e) { /* sin conexión */ }
   Object.assign(ped, anterior);
   return false;
+}
+
+// --- repartidores: cuentas para el portal quickmart.cl/reparto ---
+$("repEnlace").textContent = PORTAL_REPARTO.replace("https://", "");
+$("repCopiar").onclick = async () => {
+  try { await navigator.clipboard.writeText(PORTAL_REPARTO); avisar("Enlace copiado", "ok"); } catch (e) { avisar("No se pudo copiar", "mal"); }
+};
+function abrirRepartidores() {
+  if (sinServidor()) { $("repMensaje").textContent = $("pedMensaje").textContent; $("repMensaje").hidden = false; return; }
+  if (!pedidosListos) $("listaRepartidores").replaceChildren(crear("p", "vacio", "Cargando…"));
+  abrirPedidos();
+}
+function pintarRepartidores() {
+  $("repMensaje").hidden = true;
+  const activos = repartidores.filter((r) => r.activo).length;
+  $("repCuenta").textContent = repartidores.length
+    ? activos + (activos === 1 ? " repartidor activo" : " repartidores activos") + (repartidores.length > activos ? " · " + (repartidores.length - activos) + " desactivado(s)" : "")
+    : "Aún no hay repartidores. Agrega el primero.";
+  $("listaRepartidores").replaceChildren(...repartidores.map((r) => {
+    const fila = crear("div", "item" + (r.activo ? "" : " apagado"));
+    fila.append(crear("div", "foto", r.nombre.charAt(0).toUpperCase()));
+    const d = crear("div", "datos");
+    d.append(crear("div", "nombre", r.nombre));
+    d.append(crear("div", "detalle", "Usuario: " + r.usuario + (r.telefono ? " · " + r.telefono : "")));
+    const enCamino = pedidos.filter((p) => p.repartidor_id === r.user_id && p.estado === "en camino").length;
+    const hoy = new Date().toDateString();
+    const entregadosHoy = pedidos.filter((p) => p.repartidor_id === r.user_id && p.estado === "entregado" && p.entregado_en && new Date(p.entregado_en).toDateString() === hoy).length;
+    const chips = crear("div", "chips");
+    chips.append(crear("span", "chip " + (r.activo ? "si" : "no"), r.activo ? "Activo" : "Desactivado"),
+      crear("span", "chip", enCamino + " en camino"), crear("span", "chip", entregadosHoy + " entregados hoy"));
+    d.append(chips);
+    const acc = crear("div", "acciones");
+    acc.append(
+      boton("secundario", "Editar", () => abrirFichaRepartidor("editar", r)),
+      boton("secundario", "Contraseña", () => abrirFichaRepartidor("clave", r)),
+      boton("secundario", r.activo ? "Desactivar" : "Activar", () => activarRepartidor(r)),
+      boton("peligro", "Eliminar", () => borrarRepartidor(r)));
+    fila.append(d, acc);
+    return fila;
+  }));
+}
+
+let fichaRep = { modo: "nuevo", rep: null };
+function claveAlAzar() {
+  const letras = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const n = crypto.getRandomValues(new Uint8Array(10));
+  return Array.from(n, (x) => letras[x % letras.length]).join("");
+}
+function abrirFichaRepartidor(modo, rep) {
+  fichaRep = { modo, rep };
+  $("tituloRepartidor").textContent = { nuevo: "Nuevo repartidor", editar: "Editar repartidor", clave: "Nueva contraseña de " + (rep ? rep.nombre : "") }[modo];
+  $("rCamposDatos").hidden = modo === "clave";
+  $("rCampoUsuario").hidden = modo !== "nuevo";
+  $("rCampoClave").hidden = modo === "editar";
+  $("rNombre").value = rep ? rep.nombre : "";
+  $("rTelefono").value = rep ? rep.telefono || "" : "";
+  $("rUsuario").value = "";
+  $("rClave").value = modo === "editar" ? "" : claveAlAzar();
+  $("rError").textContent = "";
+  $("dlgRepartidor").showModal();
+  (modo === "clave" ? $("rClave") : $("rNombre")).focus();
+}
+$("nuevoRepartidor").onclick = () => abrirFichaRepartidor("nuevo", null);
+$("rGenerar").onclick = () => { $("rClave").value = claveAlAzar(); };
+$("rNombre").addEventListener("input", () => {
+  if (fichaRep.modo !== "nuevo" || $("rUsuario").dataset.tocado) return;
+  $("rUsuario").value = $("rNombre").value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
+    .replace(/\s+/g, ".").replace(/[^a-z0-9._-]/g, "").slice(0, 30);
+});
+$("rUsuario").addEventListener("input", () => { $("rUsuario").dataset.tocado = "1"; });
+$("formRepartidor").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const { modo, rep } = fichaRep;
+  const nombre = $("rNombre").value.trim(), telefono = $("rTelefono").value.trim();
+  const usuario = $("rUsuario").value.trim().toLowerCase(), clave = $("rClave").value;
+  if (modo !== "clave" && !nombre) { $("rError").textContent = "Escribe el nombre."; return; }
+  if (modo === "nuevo" && !/^[a-z0-9._-]{3,30}$/.test(usuario)) { $("rError").textContent = "El usuario lleva de 3 a 30 letras o números, sin espacios ni tildes."; return; }
+  if (modo !== "editar" && clave.length < 8) { $("rError").textContent = "La contraseña debe tener al menos 8 caracteres."; return; }
+  $("rGuardar").disabled = true;
+  $("rError").textContent = "";
+  try {
+    if (modo === "nuevo") await api("crear_repartidor", { usuario, nombre, telefono, clave });
+    else if (modo === "editar") await api("editar_repartidor", { id: rep.user_id, nombre, telefono });
+    else await api("clave_repartidor", { id: rep.user_id, clave });
+  } catch (err) {
+    $("rError").textContent = err.message;
+    $("rGuardar").disabled = false;
+    return;
+  }
+  $("rGuardar").disabled = false;
+  delete $("rUsuario").dataset.tocado;
+  $("dlgRepartidor").close();
+  if (modo !== "editar") {
+    const u = modo === "nuevo" ? usuario : rep.usuario;
+    const copiar = await confirmar({
+      titulo: modo === "nuevo" ? "Cuenta creada" : "Contraseña cambiada",
+      texto: "Envíale estos datos al repartidor. La contraseña no se vuelve a mostrar.\nUsuario: " + u + " · Contraseña: " + clave,
+      aceptar: "Copiar datos", cancelar: "Cerrar", dibujo: "candado",
+    });
+    if (copiar) {
+      try {
+        await navigator.clipboard.writeText("Portal de repartidores QuickMart: " + PORTAL_REPARTO + "\nUsuario: " + u + "\nContraseña: " + clave);
+        avisar("Datos copiados", "ok");
+      } catch (err) { avisar("No se pudo copiar", "mal"); }
+    }
+  } else avisar("Repartidor guardado", "ok");
+  await cargarPedidos(true);
+});
+async function activarRepartidor(r) {
+  if (r.activo && !(await confirmar({ titulo: "¿Desactivar a " + r.nombre + "?",
+    texto: "No podrá entrar al portal. Sus pedidos en camino vuelven a quedar disponibles.", aceptar: "Desactivar", cancelar: "Cancelar", peligro: true, dibujo: "alerta" }))) return;
+  try { await api("activar_repartidor", { id: r.user_id, activo: !r.activo }); avisar(r.activo ? "Repartidor desactivado" : "Repartidor activado", "ok"); }
+  catch (e) { avisar(e.message, "mal"); }
+  await cargarPedidos(true);
+}
+async function borrarRepartidor(r) {
+  if (!(await confirmar({ titulo: "¿Eliminar a " + r.nombre + "?", texto: "Se borra su cuenta. Sus pedidos en camino vuelven a quedar disponibles. No se puede deshacer.",
+    aceptar: "Eliminar", cancelar: "Cancelar", peligro: true, dibujo: "basura" }))) return;
+  try { await api("borrar_repartidor", { id: r.user_id }); avisar("Repartidor eliminado", "ok"); } catch (e) { avisar(e.message, "mal"); }
+  await cargarPedidos(true);
 }
 
 async function arrancar() {
@@ -1296,6 +1492,7 @@ async function arrancar() {
   $("acceso").hidden = true;
   $("panel").hidden = false;
   $("salir").hidden = LOCAL;
+  if (!LOCAL) cargarPedidos(true);   // al abrir: descuenta el stock de lo que entregaron los repartidores
 }
 
 function pedirClave(mensaje) {
