@@ -249,7 +249,7 @@
     </div>
     <p class="caja error" id="repMensaje" hidden></p>
     <div class="barra">
-      <span style="flex:1" class="cuenta" id="repCuenta">Cada repartidor entra con su usuario y contraseña, toma pedidos y los entrega con el PIN del cliente.</span>
+      <span style="flex:1" class="cuenta" id="repCuenta">Cada repartidor entra con su correo y contraseña, toma pedidos y los entrega con el PIN del cliente.</span>
       <button class="principal" id="nuevoRepartidor" type="button">+ Agregar repartidor</button>
     </div>
     <div class="lista" id="listaRepartidores"></div>
@@ -402,10 +402,10 @@
   <form class="ficha" id="formRepartidor" novalidate>
     <div id="rCamposDatos" class="dos">
       <label>Nombre <input id="rNombre" autocomplete="off"></label>
-      <label>Teléfono <small>Opcional</small><input id="rTelefono" type="tel" inputmode="tel" autocomplete="off"></label>
+      <label>Teléfono <input id="rTelefono" type="tel" inputmode="tel" autocomplete="off" placeholder="+56 9 1234 5678"></label>
     </div>
-    <label id="rCampoUsuario">Usuario <small>Con esto entra al portal. Sin espacios ni tildes.</small>
-      <input id="rUsuario" autocomplete="off" autocapitalize="none" spellcheck="false"></label>
+    <label id="rCampoUsuario">Correo <small>Con este correo entra al portal de repartidores.</small>
+      <input id="rUsuario" type="email" inputmode="email" autocomplete="off" autocapitalize="none" spellcheck="false"></label>
     <div id="rCampoClave">
       <label>Contraseña <small>Mínimo 8 caracteres. Se genera una al azar; puedes cambiarla.</small>
         <input id="rClave" autocomplete="new-password" spellcheck="false"></label>
@@ -1378,7 +1378,7 @@ function pintarRepartidores() {
     fila.append(crear("div", "foto", r.nombre.charAt(0).toUpperCase()));
     const d = crear("div", "datos");
     d.append(crear("div", "nombre", r.nombre));
-    d.append(crear("div", "detalle", "Usuario: " + r.usuario + (r.telefono ? " · " + r.telefono : "")));
+    d.append(crear("div", "detalle", r.usuario + (r.telefono ? " · " + r.telefono : "")));
     const enCamino = pedidos.filter((p) => p.repartidor_id === r.user_id && p.estado === "en camino").length;
     const hoy = new Date().toDateString();
     const entregadosHoy = pedidos.filter((p) => p.repartidor_id === r.user_id && p.estado === "entregado" && p.entregado_en && new Date(p.entregado_en).toDateString() === hoy).length;
@@ -1407,11 +1407,11 @@ function abrirFichaRepartidor(modo, rep) {
   fichaRep = { modo, rep };
   $("tituloRepartidor").textContent = { nuevo: "Nuevo repartidor", editar: "Editar repartidor", clave: "Nueva contraseña de " + (rep ? rep.nombre : "") }[modo];
   $("rCamposDatos").hidden = modo === "clave";
-  $("rCampoUsuario").hidden = modo !== "nuevo";
+  $("rCampoUsuario").hidden = modo === "clave";
   $("rCampoClave").hidden = modo === "editar";
   $("rNombre").value = rep ? rep.nombre : "";
   $("rTelefono").value = rep ? rep.telefono || "" : "";
-  $("rUsuario").value = "";
+  $("rUsuario").value = rep && rep.usuario.includes("@") ? rep.usuario : "";
   $("rClave").value = modo === "editar" ? "" : claveAlAzar();
   $("rError").textContent = "";
   $("dlgRepartidor").showModal();
@@ -1419,25 +1419,20 @@ function abrirFichaRepartidor(modo, rep) {
 }
 $("nuevoRepartidor").onclick = () => abrirFichaRepartidor("nuevo", null);
 $("rGenerar").onclick = () => { $("rClave").value = claveAlAzar(); };
-$("rNombre").addEventListener("input", () => {
-  if (fichaRep.modo !== "nuevo" || $("rUsuario").dataset.tocado) return;
-  $("rUsuario").value = $("rNombre").value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
-    .replace(/\s+/g, ".").replace(/[^a-z0-9._-]/g, "").slice(0, 30);
-});
-$("rUsuario").addEventListener("input", () => { $("rUsuario").dataset.tocado = "1"; });
 $("formRepartidor").addEventListener("submit", async (e) => {
   e.preventDefault();
   const { modo, rep } = fichaRep;
   const nombre = $("rNombre").value.trim(), telefono = $("rTelefono").value.trim();
   const usuario = $("rUsuario").value.trim().toLowerCase(), clave = $("rClave").value;
   if (modo !== "clave" && !nombre) { $("rError").textContent = "Escribe el nombre."; return; }
-  if (modo === "nuevo" && !/^[a-z0-9._-]{3,30}$/.test(usuario)) { $("rError").textContent = "El usuario lleva de 3 a 30 letras o números, sin espacios ni tildes."; return; }
+  if (modo !== "clave" && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(usuario)) { $("rError").textContent = "Escribe el correo del repartidor."; return; }
+  if (modo !== "clave" && !/^\+?[0-9 ]{8,16}$/.test(telefono)) { $("rError").textContent = "Escribe el teléfono (por ejemplo +56 9 1234 5678)."; return; }
   if (modo !== "editar" && clave.length < 8) { $("rError").textContent = "La contraseña debe tener al menos 8 caracteres."; return; }
   $("rGuardar").disabled = true;
   $("rError").textContent = "";
   try {
-    if (modo === "nuevo") await api("crear_repartidor", { usuario, nombre, telefono, clave });
-    else if (modo === "editar") await api("editar_repartidor", { id: rep.user_id, nombre, telefono });
+    if (modo === "nuevo") await api("crear_repartidor", { correo: usuario, nombre, telefono, clave });
+    else if (modo === "editar") await api("editar_repartidor", { id: rep.user_id, correo: usuario, nombre, telefono });
     else await api("clave_repartidor", { id: rep.user_id, clave });
   } catch (err) {
     $("rError").textContent = err.message;
@@ -1445,18 +1440,17 @@ $("formRepartidor").addEventListener("submit", async (e) => {
     return;
   }
   $("rGuardar").disabled = false;
-  delete $("rUsuario").dataset.tocado;
   $("dlgRepartidor").close();
   if (modo !== "editar") {
     const u = modo === "nuevo" ? usuario : rep.usuario;
     const copiar = await confirmar({
       titulo: modo === "nuevo" ? "Cuenta creada" : "Contraseña cambiada",
-      texto: "Envíale estos datos al repartidor. La contraseña no se vuelve a mostrar.\nUsuario: " + u + " · Contraseña: " + clave,
+      texto: "Envíale estos datos al repartidor. La contraseña no se vuelve a mostrar.\nCorreo: " + u + "\nContraseña: " + clave,
       aceptar: "Copiar datos", cancelar: "Cerrar", dibujo: "candado",
     });
     if (copiar) {
       try {
-        await navigator.clipboard.writeText("Portal de repartidores QuickMart: " + PORTAL_REPARTO + "\nUsuario: " + u + "\nContraseña: " + clave);
+        await navigator.clipboard.writeText("Portal de repartidores QuickMart: " + PORTAL_REPARTO + "\nCorreo: " + u + "\nContraseña: " + clave);
         avisar("Datos copiados", "ok");
       } catch (err) { avisar("No se pudo copiar", "mal"); }
     }

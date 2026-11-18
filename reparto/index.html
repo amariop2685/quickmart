@@ -133,8 +133,8 @@
   <section id="acceso" class="caja" hidden>
     <form id="formAcceso" novalidate>
       <h2>Portal de repartidores</h2>
-      <p>Entra con el usuario y la contraseña que te dio QuickMart.</p>
-      <label>Usuario <input id="usuario" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+      <p>Entra con tu correo y la contraseña que te dio QuickMart.</p>
+      <label>Correo <input id="usuario" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
       <label>Contraseña <input id="clave" type="password" autocomplete="current-password"></label>
       <p class="error" id="accesoError" role="alert"></p>
       <button class="principal" type="submit" id="entrar">Entrar</button>
@@ -291,7 +291,7 @@ $("formAcceso").addEventListener("submit", async (e) => {
   e.preventDefault();
   const usuario = $("usuario").value.trim().toLowerCase();
   const clave = $("clave").value;
-  if (!usuario || !clave) { $("accesoError").textContent = "Escribe tu usuario y contraseña."; return; }
+  if (!usuario || !clave) { $("accesoError").textContent = "Escribe tu correo y contraseña."; return; }
   $("entrar").disabled = true;
   $("accesoError").textContent = "";
   const correo = usuario.includes("@") ? usuario : usuario + "@" + DOMINIO_REPARTO;
@@ -299,7 +299,7 @@ $("formAcceso").addEventListener("submit", async (e) => {
   $("entrar").disabled = false;
   if (error) {
     $("accesoError").textContent = /banned/i.test(error.message || "") ? "Tu cuenta está desactivada. Habla con QuickMart."
-      : "Usuario o contraseña incorrectos.";
+      : "Correo o contraseña incorrectos.";
     return;
   }
   $("clave").value = "";
