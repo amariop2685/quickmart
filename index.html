@@ -1691,6 +1691,23 @@ function pintarPines() {
     return fila;
   }));
 }
+// Quita los PIN de pedidos que ya se entregaron o cancelaron (la base dice cuáles siguen pendientes).
+async function revisarPines() {
+  const lista = leerPines();
+  if (!nube || !lista.length) return;
+  try {
+    const { data, error } = await nube.rpc("pines_pendientes", { p_codigos: lista.map((x) => x.codigo) });
+    if (error || !Array.isArray(data)) return;   // sin respuesta: se dejan como están
+    const pendientes = new Set(data);
+    const quedan = leerPines().filter((x) => pendientes.has(x.codigo));
+    if (quedan.length === leerPines().length) return;
+    guardarPines(quedan);
+    pintarPines();
+  } catch (e) { /* sin conexión: se revisa la próxima vez */ }
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) revisarPines(); });
+setInterval(() => { if (!document.hidden) revisarPines(); }, 60000);
+
 function nuevoCodigo() {
   const letras = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   // sin O/0 ni I/1, que se confunden
   const azar = crypto.getRandomValues(new Uint8Array(6));
@@ -1856,6 +1873,7 @@ async function iniciarCuentas() {
     await cargarLibreria();
     nube = window.supabase.createClient(CUENTAS.url, CUENTAS.clave);
   } catch (e) { return; }   // sin cuentas: la tienda funciona igual
+  revisarPines();
   $("btnCuenta").hidden = false;
   nube.auth.onAuthStateChange((_evento, s) => { sesion = s; pintarCuenta(); });
   const { data } = await nube.auth.getSession();
