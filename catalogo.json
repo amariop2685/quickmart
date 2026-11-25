@@ -185,6 +185,185 @@
       "formato": "1 kg",
       "precio": 1600,
       "cat": "Frutas y verduras"
+    },
+    {
+      "id": "m01",
+      "nombre": "Bebida cola",
+      "formato": "botella 1,5 L",
+      "precio": 0,
+      "cat": "Bebidas",
+      "imagen": "img/bebida-cola-1-5l.svg",
+      "oculto": true,
+      "marca": "Coca-Cola"
+    },
+    {
+      "id": "m02",
+      "nombre": "Bebida cola",
+      "formato": "botella 3 L",
+      "precio": 0,
+      "cat": "Bebidas",
+      "imagen": "img/bebida-cola-3l.svg",
+      "oculto": true,
+      "marca": "Coca-Cola"
+    },
+    {
+      "id": "m03",
+      "nombre": "Agua mineral sin gas",
+      "formato": "botella 1,6 L",
+      "precio": 0,
+      "cat": "Bebidas",
+      "imagen": "img/agua-mineral-1-6l.svg",
+      "oculto": true,
+      "marca": "Cachantun"
+    },
+    {
+      "id": "m04",
+      "nombre": "Agua purificada sin gas",
+      "formato": "bidón 6 L",
+      "precio": 0,
+      "cat": "Bebidas",
+      "imagen": "img/agua-mineral-bidon-6l.svg",
+      "oculto": true,
+      "marca": "Benedictino"
+    },
+    {
+      "id": "m05",
+      "nombre": "Leche entera",
+      "formato": "caja 1 L",
+      "precio": 0,
+      "cat": "Lácteos y huevos",
+      "imagen": "img/leche-entera-1l.svg",
+      "oculto": true,
+      "marca": "Colun"
+    },
+    {
+      "id": "m06",
+      "nombre": "Leche entera",
+      "formato": "caja 1 L",
+      "precio": 0,
+      "cat": "Lácteos y huevos",
+      "imagen": "img/leche-entera-1l.svg",
+      "oculto": true,
+      "marca": "Soprole"
+    },
+    {
+      "id": "m07",
+      "nombre": "Queso laminado",
+      "formato": "250 g",
+      "precio": 0,
+      "cat": "Lácteos y huevos",
+      "imagen": "img/queso-laminado-250g.svg",
+      "oculto": true,
+      "marca": "Colun"
+    },
+    {
+      "id": "m08",
+      "nombre": "Huevos",
+      "formato": "bandeja 30 un.",
+      "precio": 0,
+      "cat": "Lácteos y huevos",
+      "imagen": "img/huevos-30.svg",
+      "oculto": true
+    },
+    {
+      "id": "m09",
+      "nombre": "Jamón laminado",
+      "formato": "250 g",
+      "precio": 0,
+      "cat": "Fiambrería",
+      "imagen": "img/jamon-laminado-250g.svg",
+      "oculto": true,
+      "marca": "San Jorge"
+    },
+    {
+      "id": "m10",
+      "nombre": "Jamón laminado",
+      "formato": "250 g",
+      "precio": 0,
+      "cat": "Fiambrería",
+      "imagen": "img/jamon-laminado-250g.svg",
+      "oculto": true,
+      "marca": "PF"
+    },
+    {
+      "id": "m11",
+      "nombre": "Aceite vegetal",
+      "formato": "botella 1 L",
+      "precio": 0,
+      "cat": "Despensa",
+      "imagen": "img/aceite-vegetal-1l.svg",
+      "oculto": true,
+      "marca": "Belmont"
+    },
+    {
+      "id": "m12",
+      "nombre": "Aceite vegetal",
+      "formato": "botella 1 L",
+      "precio": 0,
+      "cat": "Despensa",
+      "imagen": "img/aceite-vegetal-1l.svg",
+      "oculto": true,
+      "marca": "Chef"
+    },
+    {
+      "id": "m13",
+      "nombre": "Arroz grado 2",
+      "formato": "1 kg",
+      "precio": 0,
+      "cat": "Despensa",
+      "imagen": "img/arroz-1kg.svg",
+      "oculto": true,
+      "marca": "Tucapel"
+    },
+    {
+      "id": "m14",
+      "nombre": "Arroz grado 2",
+      "formato": "1 kg",
+      "precio": 0,
+      "cat": "Despensa",
+      "imagen": "img/arroz-1kg.svg",
+      "oculto": true,
+      "marca": "Miraflores"
+    },
+    {
+      "id": "m15",
+      "nombre": "Spaghetti N° 5",
+      "formato": "400 g",
+      "precio": 0,
+      "cat": "Despensa",
+      "imagen": "img/fideos-spaghetti-400g.svg",
+      "oculto": true,
+      "marca": "Carozzi"
+    },
+    {
+      "id": "m16",
+      "nombre": "Spaghetti N° 5",
+      "formato": "400 g",
+      "precio": 0,
+      "cat": "Despensa",
+      "imagen": "img/fideos-spaghetti-400g.svg",
+      "oculto": true,
+      "marca": "Lucchetti"
+    },
+    {
+      "id": "m17",
+      "nombre": "Papel higiénico doble hoja",
+      "formato": "pack 12 rollos",
+      "precio": 0,
+      "cat": "Aseo",
+      "imagen": "img/papel-higienico-12.svg",
+      "oculto": true,
+      "marca": "Elite"
+    },
+    {
+      "id": "m18",
+      "nombre": "Papel higiénico",
+      "formato": "pack 4 rollos",
+      "precio": 0,
+      "cat": "Aseo",
+      "imagen": "img/papel-higienico-4.svg",
+      "oculto": true,
+      "marca": "Confort"
     }
   ],
   "servicios": [

@@ -321,6 +321,8 @@
 <dialog id="dlgProducto">
   <h2 id="tituloProducto">Producto</h2>
   <form class="ficha" id="formProducto" novalidate>
+    <label style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="pVisible" style="width:22px;height:22px">
+      Mostrar en la tienda <small>Desmárcalo para ocultarlo sin borrarlo (por ejemplo, si aún no tiene precio).</small></label>
     <div class="dos">
       <label>Nombre <input id="pNombre" required></label>
       <label>Marca <small>Opcional</small><input id="pMarca"></label>
@@ -744,7 +746,8 @@ function pintarProductos() {
     const fila = crear("div", "item");
     const d = crear("div", "datos");
     if (p.marca) d.append(crear("div", "marca", p.marca));
-    d.append(crear("div", "nombre", p.nombre),
+    if (p.oculto) fila.classList.add("apagado");
+    d.append(crear("div", "nombre", (p.oculto ? "🙈 Oculto · " : "") + p.nombre),
              crear("div", "detalle", [p.formato, p.cat, pesos(p.precio) + (p.unidad ? " / " + p.unidad + ", de a " + textoPaso(p.unidad, Number(p.paso) || 1) : "")].filter(Boolean).join(" · ")));
     if (conStock(p)) {
       const st = crear("div", "stock" + (p.stock <= 0 ? " cero" : porReponer(p) ? " bajo" : ""));
@@ -777,6 +780,7 @@ function abrirProducto(p) {
   fotoActual = p && p.imagen ? p.imagen : "";
   $("tituloProducto").textContent = p ? "Editar producto" : "Agregar producto";
   $("pNombre").value = p ? p.nombre || "" : "";
+  $("pVisible").checked = !(p && p.oculto);
   $("pMarca").value = p ? p.marca || "" : "";
   $("pFormato").value = p ? p.formato || "" : "";
   $("pPrecio").value = p ? p.precio : "";
@@ -865,6 +869,7 @@ $("formProducto").addEventListener("submit", async (e) => {
   let error = "";
   if (!nombre) error = "Escribe el nombre del producto.";
   else if ($("pPrecio").value === "" || !Number.isFinite(precio) || precio < 0) error = "Escribe un precio válido.";
+  if (!error && $("pVisible").checked && !(precio > 0)) error = "Escribe el precio antes de mostrarlo en la tienda (o desmarca “Mostrar en la tienda”).";
   if (!error && !PAGOS_FICHA.some(([, casilla]) => $(casilla).checked)) error = "Marca al menos una forma de pago para este producto.";
   const antes = Math.round(Number($("pAntes").value) || 0);
   if (!error && antes && antes <= precio) error = "El precio normal debe ser mayor que el precio de venta. Déjalo vacío si no hay rebaja.";
@@ -891,6 +896,7 @@ $("formProducto").addEventListener("submit", async (e) => {
   p.nombre = nombre;
   p.formato = $("pFormato").value.trim();
   p.precio = Math.round(precio);
+  if ($("pVisible").checked) delete p.oculto; else p.oculto = true;
   p.cat = $("pCat").value.trim() || "Otros";
   if (antes > precio) p.antes = antes; else delete p.antes;
   // formas de pago: se guarda la lista solo si se desmarcó alguna, y los precios especiales que se escribieron

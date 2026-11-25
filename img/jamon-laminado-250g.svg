@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 450">
+<rect width="450" height="450" fill="#fff"/>
+<rect x="96" y="20" width="334" height="410" rx="28" fill="#fdeff0"/>
+<rect x="130" y="120" width="268" height="260" rx="20" fill="#fff" opacity=".7"/><ellipse cx="245" cy="260" rx="105" ry="80" fill="#f3a7a8" stroke="#e88588" stroke-width="5"/><ellipse cx="270" cy="250" rx="40" ry="24" fill="#f8c7c8" opacity=".8"/><ellipse cx="259" cy="246" rx="105" ry="80" fill="#f3a7a8" stroke="#e88588" stroke-width="5"/><ellipse cx="284" cy="236" rx="40" ry="24" fill="#f8c7c8" opacity=".8"/><ellipse cx="273" cy="232" rx="105" ry="80" fill="#f3a7a8" stroke="#e88588" stroke-width="5"/><ellipse cx="298" cy="222" rx="40" ry="24" fill="#f8c7c8" opacity=".8"/><ellipse cx="287" cy="218" rx="105" ry="80" fill="#f3a7a8" stroke="#e88588" stroke-width="5"/><ellipse cx="312" cy="208" rx="40" ry="24" fill="#f8c7c8" opacity=".8"/>
+<rect width="84" height="450" fill="#123a8c"/>
+<text transform="translate(55 346) rotate(-90)" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" font-size="29" fill="#fff">JAMÓN LAMINADO</text>
+<rect x="0" y="360" width="139" height="90" rx="0" fill="#0b1a4a"/>
+<text x="16" y="420" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" font-size="40" fill="#fff">250 g</text>
+</svg>

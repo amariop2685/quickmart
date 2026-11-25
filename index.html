@@ -2243,7 +2243,8 @@ async function iniciar() {
     if (!r.ok) throw new Error("HTTP " + r.status);
     const c = await r.json();
     CONFIG = c.config || {};
-    PRODUCTOS = Array.isArray(c.productos) ? c.productos : [];
+    // los productos ocultos desde la administración (por ejemplo, aún sin precio) no se muestran ni se pueden pedir
+    PRODUCTOS = (Array.isArray(c.productos) ? c.productos : []).filter((p) => p && !p.oculto);
     SERVICIOS = Array.isArray(c.servicios) ? c.servicios : [];
     BANNERS = (Array.isArray(c.banners) ? c.banners : []).filter((b) => b && b.imagen).slice(0, 8);
   } catch (e) {
