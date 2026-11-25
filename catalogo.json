@@ -3,7 +3,7 @@
     "nombre": "QuickMart",
     "bajada": "Te lo llevamos a tu puerta.",
     "whatsapp": "56952284219",
-    "tarifa": 2500,
+    "tarifa": 500,
     "minimo": 1000,
     "horario": "Entregas sábados y domingos, de 10:00 a 20:00.",
     "edificios": [
@@ -11,7 +11,15 @@
       "Edificio 2",
       "Edificio 3"
     ],
-    "transferencia": "Nombre: Importadora y comercializadora Mario Acosta Palacio E.I.R.L\nRUT: 76327536-1\nBanco: Banco Estado\nTipo de cuenta: Chequera Electrónica\nNúmero de cuenta: 29170627197\nCorreo: pedidos@quickmart.cl"
+    "transferencia": "Nombre: Importadora y comercializadora Mario Acosta Palacio E.I.R.L\nRUT: 76327536-1\nBanco: Banco Estado\nTipo de cuenta: Chequera Electrónica\nNúmero de cuenta: 29170627197\nCorreo: pedidos@quickmart.cl",
+    "ajusteTransferencia": 0,
+    "ajusteEfectivo": 0,
+    "ajusteTarjeta": 0,
+    "pagos": [
+      "transferencia",
+      "efectivo"
+    ],
+    "carrusel": true
   },
   "productos": [
     {
