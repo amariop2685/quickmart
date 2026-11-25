@@ -23,8 +23,8 @@
   #estado { font-size: .9rem; font-weight: 600; color: var(--suave); min-width: 9em; text-align: right; }
   #estado.ok { color: var(--ok); } #estado.mal { color: var(--rojo); }
 
-  .pestanas { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 16px 0; }
-  @media (max-width: 620px) { .pestanas { grid-template-columns: repeat(3, 1fr); } }
+  .pestanas { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin: 16px 0; }
+  @media (max-width: 620px) { .pestanas { grid-template-columns: repeat(4, 1fr); } .pestanas button { font-size: .82rem; } }
   /* Pedidos */
   .filtroPedidos { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
   .filtroPedidos button { font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; border-radius: 999px; padding: 7px 12px;
@@ -40,6 +40,36 @@
   .pedidoAdm .meta { color: var(--suave); font-size: .9rem; }
   .pedidoAdm .total { font-weight: 700; }
   .pedidoAdm .descontado { font-size: .85rem; color: #17663a; font-weight: 600; }
+  .tarjetas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 8px; }
+  @media (max-width: 760px) { .tarjetas { grid-template-columns: repeat(2, 1fr); } }
+  .tarjeta { background: #fff; border: 1px solid var(--borde); border-radius: 14px; padding: 12px 14px; display: grid; gap: 2px; align-content: start; }
+  .tarjeta .tIcono { font-size: 1.3rem; }
+  .tarjeta .tTitulo { color: var(--suave); font-size: .85rem; font-weight: 600; }
+  .tarjeta .tValor { font-size: 1.45rem; line-height: 1.2; }
+  .tarjeta .tDetalle { color: var(--suave); font-size: .78rem; }
+  .tarjeta.ok .tValor { color: #17663a; } .tarjeta.mal .tValor { color: var(--rojo); }
+  .dosCol { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; align-items: start; }
+  @media (max-width: 760px) { .dosCol { grid-template-columns: 1fr; } }
+  .dosCol h3, .bloque h3 { margin: 0 0 10px; font-size: 1.02rem; }
+  .bloque { margin: 12px 0; }
+  .listaComprar { margin: 8px 0; padding-left: 18px; display: grid; gap: 4px; }
+  .listaComprar li small { display: block; color: var(--suave); }
+  .listaComprar li.agotado span { color: var(--rojo); font-weight: 600; }
+  .alcance { font-weight: 700; margin: 6px 0 10px; } .alcance.ok { color: #17663a; } .alcance.mal { color: var(--rojo); }
+  .solicitud { border: 1px solid var(--borde); border-left: 5px solid #e8a500; border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; margin-bottom: 8px; }
+  .solicitud.urgente { border-left-color: var(--rojo); }
+  .solicitud.lista { opacity: .6; }
+  .solicitud .solCab { display: flex; justify-content: space-between; gap: 8px; }
+  .solicitud small { color: var(--suave); }
+  .solicitud .solTexto { font-weight: 600; }
+  .solAcciones { display: flex; gap: 6px; flex-wrap: wrap; }
+  .solAcciones button { padding: 6px 10px; font-size: .85rem; }
+  .lineaCompra { display: grid; grid-template-columns: 1fr 90px 110px auto; gap: 6px; }
+  @media (max-width: 520px) { .lineaCompra { grid-template-columns: 1fr 1fr; } .lineaCompra select { grid-column: 1 / -1; } }
+  .lineaCompra button { padding: 6px 10px; }
+  .costoCaja { border: 1px dashed var(--borde); border-radius: 12px; padding: 12px; display: grid; gap: 10px; }
+  .costoCaja legend { font-weight: 700; padding: 0 6px; }
+  .sugerido { font-weight: 600; color: #17663a; margin: 0; }
   .repLinea { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: .92rem; font-weight: 600; }
   .repLinea select { width: auto; padding: 6px 10px; font-size: .9rem; }
   .portalRep { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
@@ -205,15 +235,47 @@
 
 <main class="ancho" id="panel" hidden>
   <div class="pestanas" role="tablist">
+    <button type="button" role="tab" data-vista="inicio" aria-selected="true" id="tabInicio">Inicio</button>
     <button type="button" role="tab" data-vista="pedidos" aria-selected="false">Pedidos</button>
     <button type="button" role="tab" data-vista="repartidores" aria-selected="false">Repartidores</button>
-    <button type="button" role="tab" data-vista="productos" aria-selected="true">Productos</button>
+    <button type="button" role="tab" data-vista="productos" aria-selected="false">Productos</button>
     <button type="button" role="tab" data-vista="servicios" aria-selected="false">Servicios</button>
     <button type="button" role="tab" data-vista="banners" aria-selected="false">Banners</button>
     <button type="button" role="tab" data-vista="negocio" aria-selected="false">Datos del negocio</button>
   </div>
 
-  <section id="v-productos">
+  <section id="v-inicio">
+    <p class="caja error" id="iniMensaje" hidden></p>
+    <div class="barra">
+      <div class="filtroPedidos" id="iniPeriodos"></div>
+      <button class="secundario" type="button" id="iniRecargar">Actualizar</button>
+    </div>
+    <div class="tarjetas" id="iniTarjetas"></div>
+    <p class="cuenta" id="iniNota"></p>
+    <div class="dosCol">
+      <div class="caja">
+        <h3>🛒 Debes comprar</h3>
+        <div id="iniComprar"></div>
+        <button class="principal" type="button" id="nuevaCompra">+ Registrar compra</button>
+      </div>
+      <div class="caja">
+        <h3>🙋 Lo que piden tus clientes</h3>
+        <div id="iniSolicitudes"></div>
+      </div>
+    </div>
+    <div class="caja bloque">
+      <h3>🧾 Compras registradas</h3>
+      <div class="lista" id="iniCompras"></div>
+    </div>
+    <details class="caja bloque">
+      <summary>¿Con cuánta plata partiste?</summary>
+      <p class="cuenta">Se suma a “Disponible para comprar”. Escribe lo que tenías para mercadería antes de usar QuickMart.</p>
+      <div class="barra"><input id="iniCaja" type="number" min="0" step="1000" placeholder="Ej.: 200000" aria-label="Plata inicial">
+        <button class="secundario" type="button" id="iniGuardarCaja">Guardar</button></div>
+    </details>
+  </section>
+
+  <section id="v-productos" hidden>
     <div class="barra">
       <input id="buscar" type="search" placeholder="Buscar por nombre, marca o categoría…" aria-label="Buscar producto">
       <button class="principal" id="nuevoProducto" type="button">+ Agregar producto</button>
@@ -331,6 +393,16 @@
       <label>Formato <small>Ej.: caja 1 L</small><input id="pFormato"></label>
       <label><span id="pPrecioEtiqueta">Precio (pesos)</span> <input id="pPrecio" type="number" min="0" step="10" required></label>
     </div>
+    <fieldset class="costoCaja" id="pCostoCaja" hidden>
+      <legend>💰 Costo y ganancia <small>(privado: el cliente no lo ve)</small></legend>
+      <div class="dos">
+        <label>Lo que te cuesta <small>Por unidad (o por kg/L), con IVA incluido.</small><input id="pCosto" type="number" min="0" step="1"></label>
+        <label>% de ganancia <small>Cuánto le subes sobre el costo. Ej.: 30</small><input id="pMargen" type="number" min="0" max="1000" step="1"></label>
+      </div>
+      <label style="display:flex;gap:10px;align-items:center;font-weight:400"><input type="checkbox" id="pFactura" style="width:20px;height:20px"> Me dan factura cuando lo compro</label>
+      <p class="sugerido" id="pSugerido"></p>
+      <button class="secundario" type="button" id="pUsarSugerido" hidden style="justify-self:start">Usar precio sugerido</button>
+    </fieldset>
     <div class="dos">
       <label>Se vende
         <select id="pVenta">
@@ -395,6 +467,38 @@
     <div class="botones">
       <button class="secundario" type="button" data-cerrar>Cancelar</button>
       <button class="principal" type="submit">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgCompra">
+  <h2>Registrar compra de mercadería</h2>
+  <form class="ficha" id="formCompra" novalidate>
+    <div class="dos">
+      <label>Fecha <input id="cFecha" type="date"></label>
+      <label>Documento
+        <select id="cDocumento">
+          <option value="factura">Factura (recuperas el IVA)</option>
+          <option value="boleta">Boleta</option>
+          <option value="sin">Sin documento</option>
+        </select>
+      </label>
+    </div>
+    <label>Proveedor <small>Opcional</small><input id="cProveedor" placeholder="Ej.: Distribuidora, supermercado, feria"></label>
+    <div>
+      <b>Productos</b> <small class="cuenta">Cantidad y costo por unidad con IVA incluido. Llenamos el costo de la última compra.</small>
+      <div id="cLineas" style="display:grid;gap:6px;margin-top:6px"></div>
+      <button class="secundario" type="button" id="cAgregarLinea" style="margin-top:6px">+ Otro producto</button>
+    </div>
+    <div class="dos">
+      <label>Total pagado <small>Se suma solo; cámbialo si pagaste otra cosa.</small><input id="cTotal" type="number" min="0" step="1"></label>
+      <label>Nota <small>Opcional</small><input id="cNota"></label>
+    </div>
+    <label style="display:flex;gap:10px;align-items:center;font-weight:400"><input type="checkbox" id="cSumarStock" style="width:20px;height:20px"> Sumar estas cantidades al stock</label>
+    <p class="error" id="cError" role="alert"></p>
+    <div class="botones">
+      <button class="secundario" type="button" data-cerrar>Cancelar</button>
+      <button class="principal" type="submit" id="cGuardar">Guardar compra</button>
     </div>
   </form>
 </dialog>
@@ -676,8 +780,8 @@ document.querySelectorAll(".pestanas button").forEach((b) => {
   b.onclick = () => {
     document.querySelectorAll(".pestanas button").forEach((x) =>
       x.setAttribute("aria-selected", String(x === b)));
-    ["pedidos", "repartidores", "productos", "servicios", "banners", "negocio"].forEach((v) => { $("v-" + v).hidden = v !== b.dataset.vista; });
-    if (b.dataset.vista === "pedidos") abrirPedidos();
+    ["inicio", "pedidos", "repartidores", "productos", "servicios", "banners", "negocio"].forEach((v) => { $("v-" + v).hidden = v !== b.dataset.vista; });
+    if (b.dataset.vista === "pedidos" || b.dataset.vista === "inicio") abrirPedidos();
     if (b.dataset.vista === "repartidores") abrirRepartidores();
   };
 });
@@ -749,6 +853,13 @@ function pintarProductos() {
     if (p.oculto) fila.classList.add("apagado");
     d.append(crear("div", "nombre", (p.oculto ? "🙈 Oculto · " : "") + p.nombre),
              crear("div", "detalle", [p.formato, p.cat, pesos(p.precio) + (p.unidad ? " / " + p.unidad + ", de a " + textoPaso(p.unidad, Number(p.paso) || 1) : "")].filter(Boolean).join(" · ")));
+    const g = conFinanzas ? gananciaUnidad(p) : null;
+    if (g) {
+      const chips = crear("div", "chips");
+      chips.append(crear("span", "chip " + (g.pesos > 0 ? "si" : "no"),
+        "Ganas " + pesos(g.pesos) + (g.porcentaje !== null ? " (" + g.porcentaje + "%)" : "") + " por unidad"));
+      d.append(chips);
+    }
     if (conStock(p)) {
       const st = crear("div", "stock" + (p.stock <= 0 ? " cero" : porReponer(p) ? " bajo" : ""));
       const menos = boton("", "−", () => ajustarStock(p, -1));
@@ -781,6 +892,7 @@ function abrirProducto(p) {
   $("tituloProducto").textContent = p ? "Editar producto" : "Agregar producto";
   $("pNombre").value = p ? p.nombre || "" : "";
   $("pVisible").checked = !(p && p.oculto);
+  llenarCosto(p);
   $("pMarca").value = p ? p.marca || "" : "";
   $("pFormato").value = p ? p.formato || "" : "";
   $("pPrecio").value = p ? p.precio : "";
@@ -922,7 +1034,7 @@ $("formProducto").addEventListener("submit", async (e) => {
   if (marca) p.marca = marca; else delete p.marca;
   if (imagen) p.imagen = imagen; else delete p.imagen;
   if (!editando) datos.productos.push(p);
-  if (await guardar()) { $("dlgProducto").close(); pintarProductos(); }
+  if (await guardar()) { await guardarCosto(p); $("dlgProducto").close(); pintarProductos(); pintarInicio(); }
 });
 
 async function eliminarProducto(p) {
@@ -1119,8 +1231,8 @@ async function api(accion, extra) {
 }
 function sinServidor() {
   if (!LOCAL && token) return false;
-  $("pedMensaje").textContent = "Los pedidos y repartidores se ven en quickmart.cl/admin.";
-  $("pedMensaje").hidden = false;
+  $("pedMensaje").textContent = $("iniMensaje").textContent = "Los pedidos, repartidores y finanzas se ven en quickmart.cl/admin.";
+  $("pedMensaje").hidden = $("iniMensaje").hidden = false;
   return true;
 }
 const nombreRep = (idRep) => { const r = repartidores.find((x) => x.user_id === idRep); return r ? r.nombre : "Repartidor eliminado"; };
@@ -1131,7 +1243,7 @@ function abrirPedidos() {
   cargarPedidos();
   clearInterval(relojPed);   // mientras miras Pedidos o Repartidores, se actualiza solo cada minuto
   relojPed = setInterval(() => {
-    if (document.hidden || ($("v-pedidos").hidden && $("v-repartidores").hidden)) return;
+    if (document.hidden || ($("v-pedidos").hidden && $("v-repartidores").hidden && $("v-inicio").hidden)) return;
     cargarPedidos(true);
   }, 60000);
 }
@@ -1152,11 +1264,19 @@ async function cargarPedidos(silencioso) {
   const llegaron = pedidosListos ? r.pedidos.filter((p) => !antes.has(p.id)).length : 0;
   pedidos = r.pedidos || [];
   repartidores = r.repartidores || [];
+  conFinanzas = r.finanzas === true;
+  costos = Object.fromEntries((r.costos || []).map((c) => [c.producto_id, { costo: c.costo, factura: c.factura, margen: c.margen === null ? null : Number(c.margen) }]));
+  compras = r.compras || [];
+  solicitudes = r.solicitudes || [];
+  ajustes = r.ajustes || {};
   pedidosListos = true;
   if (llegaron) avisar(llegaron === 1 ? "Llegó un pedido nuevo" : "Llegaron " + llegaron + " pedidos nuevos", "ok");
   await sincronizarStock();
+  await fijarCostos();
   pintarPedidos();
   pintarRepartidores();
+  pintarInicio();
+  pintarProductos();
 }
 
 // Pedidos entregados (por ti o por un repartidor) cuyo stock aún no se descuenta: se descuentan todos juntos.
@@ -1363,6 +1483,276 @@ async function cambiarEstado(ped, nuevo) {
   return false;
 }
 
+// --- finanzas: costos, ganancia, IVA, compras y lo que piden los clientes (todo privado, en Supabase) ---
+const IVA = 0.19;
+let costos = {}, compras = [], solicitudes = [], ajustes = {}, conFinanzas = false, periodo = "mes";
+const neto = (bruto) => bruto / (1 + IVA);
+// Costo real de una unidad: con factura el IVA se recupera, así que cuenta el costo sin IVA.
+function costoReal(c) { return c ? (c.factura ? neto(c.costo) : c.costo) : null; }
+// Precio sugerido: costo real + % de ganancia + IVA de la venta, redondeado hacia arriba a $10.
+function precioSugerido(c, margen) {
+  const r = costoReal(c);
+  if (r === null || !Number.isFinite(margen)) return null;
+  return Math.ceil((r * (1 + margen / 100) * (1 + IVA)) / 10) * 10;
+}
+// Lo que de verdad ganas por unidad al precio actual (sin el IVA que se va al SII).
+function gananciaUnidad(p) {
+  const r = costoReal(costos[p.id]);
+  if (r === null || !(p.precio > 0)) return null;
+  const g = neto(p.precio) - r;
+  return { pesos: Math.round(g), porcentaje: r > 0 ? Math.round((g / r) * 100) : null };
+}
+function costoPedido(ped) {
+  if (Number.isFinite(ped.costo)) return { costo: ped.costo, completo: true };
+  let costo = 0, completo = true;
+  (Array.isArray(ped.items) ? ped.items : []).forEach((i) => {
+    const r = costoReal(costos[i.id]);
+    if (r === null) { completo = false; return; }
+    costo += r * cantidadItem(i);
+  });
+  return { costo: Math.round(costo), completo };
+}
+// Anota el costo de lo vendido en los pedidos entregados (con los costos de hoy), para que no cambie después.
+async function fijarCostos() {
+  if (!conFinanzas) return;
+  const pendientes = pedidos.filter((p) => p.estado === "entregado" && !Number.isFinite(p.costo) && costoPedido(p).completo).slice(0, 20);
+  for (const p of pendientes) {
+    try {
+      const r = await api("actualizar", { id: p.id, cambios: { costo: costoPedido(p).costo } });
+      if (r.filas && r.filas[0]) Object.assign(p, r.filas[0]);
+    } catch (e) { /* lo intenta la próxima vez */ }
+  }
+}
+
+function enPeriodo(fecha) {
+  if (periodo === "todo") return true;
+  const f = new Date(fecha), hoy = new Date();
+  const mes = periodo === "mes" ? hoy.getMonth() : (hoy.getMonth() + 11) % 12;
+  const anio = periodo === "mes" || hoy.getMonth() > 0 ? hoy.getFullYear() : hoy.getFullYear() - 1;
+  return f.getMonth() === mes && f.getFullYear() === anio;
+}
+const fechaCompra = (c) => c.fecha + "T12:00:00";
+
+function cuentas(filtrar) {
+  const vendidos = pedidos.filter((p) => p.estado === "entregado" && (!filtrar || enPeriodo(p.entregado_en || p.creado)));
+  const comprasP = compras.filter((c) => !filtrar || enPeriodo(fechaCompra(c)));
+  const ventas = vendidos.reduce((s, p) => s + (Number(p.total) || 0), 0);
+  let costo = 0, sinCosto = 0;
+  vendidos.forEach((p) => { const c = costoPedido(p); costo += c.costo; if (!c.completo) sinCosto++; });
+  const debito = ventas - neto(ventas);
+  const credito = comprasP.filter((c) => c.documento === "factura").reduce((s, c) => s + (c.total - neto(c.total)), 0);
+  return { vendidos: vendidos.length, ventas, costo, sinCosto, ganancia: neto(ventas) - costo, debito, credito,
+    iva: debito - credito, comprado: comprasP.reduce((s, c) => s + c.total, 0) };
+}
+
+function tarjeta(icono, titulo, valor, detalle, clase) {
+  const t = crear("div", "tarjeta " + (clase || ""));
+  t.append(crear("span", "tIcono", icono), crear("span", "tTitulo", titulo), crear("b", "tValor", valor), crear("span", "tDetalle", detalle));
+  return t;
+}
+
+function pintarInicio() {
+  const nuevas = solicitudes.filter((s) => s.estado === "nueva").length;
+  $("tabInicio").textContent = "Inicio" + (nuevas ? " (" + nuevas + ")" : "");
+  $("iniPeriodos").replaceChildren(...[["mes", "Este mes"], ["anterior", "Mes pasado"], ["todo", "Todo"]].map(([v, t]) => {
+    const b = boton("", t, () => { periodo = v; pintarInicio(); });
+    b.setAttribute("aria-pressed", String(periodo === v));
+    return b;
+  }));
+  if (pedidosListos && !conFinanzas) {
+    $("iniMensaje").textContent = "Para ver tus ganancias, IVA y compras, corre en Supabase el archivo supabase-finanzas.sql y vuelve a desplegar la función admin-quickmart.";
+    $("iniMensaje").hidden = false;
+  }
+  const c = cuentas(true), total = cuentas(false);
+  const caja = Number(ajustes.caja_inicial) || 0;
+  const disponible = caja + total.ventas - total.comprado - Math.max(0, total.iva);
+  $("iniTarjetas").replaceChildren(
+    tarjeta("💰", "Vendiste", pesos(c.ventas), c.vendidos + (c.vendidos === 1 ? " pedido entregado" : " pedidos entregados")),
+    tarjeta("📈", "Ganaste", pesos(Math.round(c.ganancia)),
+      c.sinCosto ? "Aproximado: " + c.sinCosto + " pedido(s) con productos sin costo" : "Ventas sin IVA menos lo que te costó la mercadería",
+      c.ganancia < 0 ? "mal" : "ok"),
+    tarjeta("🧾", c.iva >= 0 ? "IVA a pagar" : "IVA a favor", pesos(Math.round(Math.abs(c.iva))),
+      "IVA de ventas " + pesos(Math.round(c.debito)) + " − IVA de compras con factura " + pesos(Math.round(c.credito))),
+    tarjeta("🛒", "Disponible para comprar", pesos(Math.round(disponible)),
+      "Lo que partiste + todo lo vendido − todo lo comprado − IVA por pagar", disponible < 0 ? "mal" : ""));
+  $("iniNota").textContent = "Cálculo de referencia: cuenta solo pedidos entregados en QuickMart y las compras que registres. " +
+    "El IVA se declara y paga cada mes en el Formulario 29 del SII; confírmalo con tu contador.";
+  $("iniCaja").value = caja || "";
+
+  // lo que hay que comprar (stock en o bajo el mínimo) y si alcanza la plata
+  const faltan = datos.productos.filter(porReponer);
+  if (!faltan.length) {
+    $("iniComprar").replaceChildren(crear("p", "vacio", datos.productos.some(conStock)
+      ? "Todo con stock suficiente ✓" : "Aún no llevas stock de ningún producto. Regístralo al anotar una compra o en cada producto."));
+  } else {
+    let estimado = 0, sinPrecio = 0;
+    const ul = crear("ul", "listaComprar");
+    faltan.forEach((p) => {
+      const sugerido = cantidadSugerida(p);
+      const cst = costos[p.id];
+      if (cst) estimado += cst.costo * sugerido; else sinPrecio++;
+      const li = crear("li", p.stock <= 0 ? "agotado" : "");
+      li.append(crear("span", "", (p.marca ? p.marca + " " : "") + p.nombre + " " + (p.formato || "")),
+        crear("small", "", (p.stock <= 0 ? "Agotado" : "Quedan " + p.stock.toLocaleString("es-CL") + unidadStock(p)) +
+          " · compra " + sugerido.toLocaleString("es-CL") + unidadStock(p) + (cst ? " ≈ " + pesos(Math.round(cst.costo * sugerido)) : "")));
+      ul.append(li);
+    });
+    const alcanza = estimado <= disponible;
+    const resumen = crear("p", "alcance " + (alcanza ? "ok" : "mal"), "Compra estimada " + pesos(Math.round(estimado)) +
+      (sinPrecio ? " (+ " + sinPrecio + " sin costo registrado)" : "") + " · " +
+      (alcanza ? "te alcanza ✓" : "te faltan " + pesos(Math.round(estimado - disponible))));
+    $("iniComprar").replaceChildren(crear("b", "", "⚠ " + faltan.length + (faltan.length === 1 ? " producto por reponer" : " productos por reponer")), ul, resumen);
+  }
+
+  // lo que piden los clientes
+  const visibles = solicitudes.filter((s) => s.estado === "nueva").concat(solicitudes.filter((s) => s.estado !== "nueva").slice(0, 10));
+  $("iniSolicitudes").replaceChildren(...(visibles.length ? visibles.map((s) => {
+    const d = crear("div", "solicitud " + s.tipo + (s.estado === "nueva" ? "" : " lista"));
+    const cab = crear("div", "solCab");
+    cab.append(crear("b", "", s.tipo === "urgente" ? "⚡ Lo necesita ahora" : "💡 Sugiere agregar"),
+      crear("small", "", new Date(s.creado).toLocaleString("es-CL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })));
+    d.append(cab, crear("div", "solTexto", s.texto));
+    const quien = [s.nombre, [s.edificio, s.depto ? "depto " + s.depto : ""].filter(Boolean).join(", "), s.contacto].filter(Boolean).join(" · ");
+    if (quien) d.append(crear("small", "", quien));
+    if (s.estado === "nueva") {
+      const acc = crear("div", "solAcciones");
+      acc.append(
+        boton("secundario", "✓ Atendida", () => estadoSolicitud(s, "atendida")),
+        boton("secundario", "+ Al catálogo", () => { abrirProducto(null); $("pNombre").value = s.texto.slice(0, 60); $("pVisible").checked = false; estadoSolicitud(s, "agregado"); }),
+        boton("peligro", "Descartar", () => estadoSolicitud(s, "descartada")));
+      d.append(acc);
+    } else d.append(crear("small", "", { atendida: "✓ Atendida", agregado: "✓ Agregado al catálogo", descartada: "Descartada" }[s.estado]));
+    return d;
+  }) : [crear("p", "vacio", "Aún no hay solicitudes. Los clientes las envían desde “¿No encuentras algo?” en la tienda.")]));
+
+  // compras registradas
+  const lista = compras.filter((x) => enPeriodo(fechaCompra(x)));
+  $("iniCompras").replaceChildren(...(lista.length ? lista.map((x) => {
+    const fila = crear("div", "item");
+    const d = crear("div", "datos");
+    d.append(crear("div", "nombre", pesos(x.total) + " · " + ({ factura: "Factura", boleta: "Boleta", sin: "Sin documento" }[x.documento])),
+      crear("div", "detalle", [new Date(fechaCompra(x)).toLocaleDateString("es-CL"), x.proveedor, (x.items || []).length ? (x.items || []).length + " productos" : "", x.nota].filter(Boolean).join(" · ")));
+    const acc = crear("div", "acciones");
+    acc.append(boton("peligro", "Borrar", () => borrarCompra(x)));
+    fila.append(d, acc);
+    return fila;
+  }) : [crear("p", "vacio", "No hay compras registradas en este período.")]));
+}
+
+async function estadoSolicitud(s, estadoNuevo) {
+  try { await api("solicitud", { id: s.id, estado: estadoNuevo }); s.estado = estadoNuevo; pintarInicio(); }
+  catch (e) { avisar(e.message, "mal"); }
+}
+async function borrarCompra(x) {
+  if (!(await confirmar({ titulo: "¿Borrar esta compra?", texto: pesos(x.total) + " del " + new Date(fechaCompra(x)).toLocaleDateString("es-CL") +
+    ". El stock que sumó no se descuenta solo: ajústalo en Productos si hace falta.", aceptar: "Borrar", cancelar: "Cancelar", peligro: true, dibujo: "basura" }))) return;
+  try { await api("borrar_compra", { id: x.id }); compras = compras.filter((y) => y !== x); pintarInicio(); avisar("Compra borrada", "ok"); }
+  catch (e) { avisar(e.message, "mal"); }
+}
+$("iniGuardarCaja").onclick = async () => {
+  try { await api("ajuste", { clave: "caja_inicial", valor: Number($("iniCaja").value) || 0 }); ajustes.caja_inicial = Number($("iniCaja").value) || 0; pintarInicio(); avisar("Guardado", "ok"); }
+  catch (e) { avisar(e.message, "mal"); }
+};
+$("iniRecargar").onclick = () => cargarPedidos();
+
+// --- registrar una compra de mercadería ---
+// Cuánto comprar de algo que se acaba: hasta el doble del mínimo (al menos 1).
+function cantidadSugerida(p) { return Math.max(1, redondo((Number(p.stockMin) || 1) * 2 - Math.max(0, p.stock))); }
+function lineaCompra(prod) {
+  const fila = crear("div", "lineaCompra");
+  const sel = crear("select");
+  sel.setAttribute("aria-label", "Producto");
+  sel.append(new Option("Elige un producto…", ""), ...datos.productos.slice().sort((a, b) => a.nombre.localeCompare(b.nombre))
+    .map((p) => new Option((p.marca ? p.marca + " " : "") + p.nombre + (p.formato ? " · " + p.formato : ""), p.id)));
+  const cant = crear("input"); cant.type = "number"; cant.min = "0"; cant.step = "any"; cant.placeholder = "Cantidad"; cant.setAttribute("aria-label", "Cantidad");
+  const costo = crear("input"); costo.type = "number"; costo.min = "0"; costo.step = "1"; costo.placeholder = "Costo unidad"; costo.setAttribute("aria-label", "Costo por unidad con IVA");
+  const quitar = boton("peligro", "✕", () => { fila.remove(); sumarCompra(); });
+  quitar.setAttribute("aria-label", "Quitar línea");
+  sel.onchange = () => { const c = costos[sel.value]; if (c && !costo.value) costo.value = c.costo; sumarCompra(); };
+  cant.oninput = costo.oninput = sumarCompra;
+  if (prod) { sel.value = prod.id; if (porReponer(prod)) cant.value = cantidadSugerida(prod); sel.onchange(); }
+  fila.append(sel, cant, costo, quitar);
+  return fila;
+}
+function sumarCompra() {
+  const total = [...document.querySelectorAll(".lineaCompra")].reduce((s, f) => {
+    const [, cant, costo] = f.querySelectorAll("input, select");
+    return s + (Number(cant.value) || 0) * (Number(costo.value) || 0);
+  }, 0);
+  if (!$("cTotal").dataset.tocado) $("cTotal").value = total ? Math.round(total) : "";
+}
+$("cTotal").oninput = () => { $("cTotal").dataset.tocado = "1"; };
+$("cAgregarLinea").onclick = () => $("cLineas").append(lineaCompra());
+$("nuevaCompra").onclick = () => {
+  $("cFecha").value = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  $("cProveedor").value = ""; $("cDocumento").value = "factura"; $("cNota").value = ""; $("cTotal").value = "";
+  delete $("cTotal").dataset.tocado;
+  $("cSumarStock").checked = true; $("cError").textContent = "";
+  const faltan = datos.productos.filter(porReponer);
+  $("cLineas").replaceChildren(...(faltan.length ? faltan.map(lineaCompra) : [lineaCompra()]));
+  sumarCompra();
+  $("dlgCompra").showModal();
+};
+$("formCompra").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const items = [...document.querySelectorAll(".lineaCompra")].map((f) => {
+    const [sel, cant, costo] = f.querySelectorAll("select, input");
+    const p = datos.productos.find((x) => x.id === sel.value);
+    return p && Number(cant.value) > 0 ? { id: p.id, nombre: (p.marca ? p.marca + " " : "") + p.nombre, cantidad: Number(cant.value), costo: Math.round(Number(costo.value) || 0), p } : null;
+  }).filter(Boolean);
+  const total = Math.round(Number($("cTotal").value) || 0);
+  if (!total) { $("cError").textContent = "Escribe el total de la compra (o los productos con su cantidad y costo)."; return; }
+  $("cGuardar").disabled = true;
+  try {
+    const r = await api("compra", { fecha: $("cFecha").value, proveedor: $("cProveedor").value.trim(), documento: $("cDocumento").value,
+      total, nota: $("cNota").value.trim(), items: items.map(({ p, ...i }) => i) });
+    compras.unshift(r.compra);
+    items.forEach((i) => { if (i.costo) costos[i.id] = Object.assign({}, costos[i.id] || {}, { costo: i.costo, factura: $("cDocumento").value === "factura" }); });
+    $("dlgCompra").close();
+    if ($("cSumarStock").checked && items.length) {
+      items.forEach((i) => { i.p.stock = redondo((conStock(i.p) ? i.p.stock : 0) + i.cantidad); if (!Number.isFinite(i.p.stockMin)) i.p.stockMin = 0; });
+      if (await guardar()) avisar("Compra registrada y stock actualizado", "ok");
+    } else avisar("Compra registrada", "ok");
+    pintarProductos(); pintarInicio();
+  } catch (err) { $("cError").textContent = err.message; }
+  $("cGuardar").disabled = false;
+});
+
+// --- costo y % de ganancia en la ficha del producto ---
+function pintarSugerido() {
+  const costo = Number($("pCosto").value), margen = Number($("pMargen").value);
+  if (!$("pCosto").value || !$("pMargen").value) { $("pSugerido").textContent = "Escribe el costo y el % de ganancia para ver el precio sugerido."; $("pUsarSugerido").hidden = true; return; }
+  const c = { costo, factura: $("pFactura").checked };
+  const precio = precioSugerido(c, margen);
+  $("pSugerido").textContent = "Precio sugerido: " + pesos(precio) + " · ganas " + pesos(Math.round(neto(precio) - costoReal(c))) + " por unidad" +
+    (c.factura ? "" : " (sin factura no recuperas el IVA de la compra)");
+  $("pUsarSugerido").hidden = false;
+  $("pUsarSugerido").onclick = () => { $("pPrecio").value = precio; };
+}
+["pCosto", "pMargen"].forEach((id) => $(id).addEventListener("input", pintarSugerido));
+$("pFactura").addEventListener("change", pintarSugerido);
+function llenarCosto(p) {
+  const c = p ? costos[p.id] : null;
+  $("pCostoCaja").hidden = !conFinanzas;
+  $("pCosto").value = c ? c.costo : "";
+  $("pFactura").checked = c ? c.factura !== false : true;
+  $("pMargen").value = c && c.margen !== null && c.margen !== undefined ? Number(c.margen) : "";
+  pintarSugerido();
+}
+async function guardarCosto(p) {
+  if (!conFinanzas) return;
+  const antes = costos[p.id] || null;
+  const costo = $("pCosto").value === "" ? null : Math.round(Number($("pCosto").value));
+  const margen = $("pMargen").value === "" ? null : Number($("pMargen").value);
+  const factura = $("pFactura").checked;
+  if (!antes && costo === null) return;
+  if (antes && antes.costo === costo && antes.factura === factura && Number(antes.margen) === Number(margen) && (antes.margen === null) === (margen === null)) return;
+  try {
+    await api("costo", { producto_id: p.id, costo, factura, margen });
+    if (costo === null) delete costos[p.id]; else costos[p.id] = { costo, factura, margen };
+  } catch (e) { avisar("El producto se guardó, pero no su costo: " + e.message, "mal"); }
+}
+
 // --- repartidores: cuentas para el portal quickmart.cl/reparto ---
 $("repEnlace").textContent = PORTAL_REPARTO.replace("https://", "");
 $("repCopiar").onclick = async () => {
@@ -1492,7 +1882,8 @@ async function arrancar() {
   $("acceso").hidden = true;
   $("panel").hidden = false;
   $("salir").hidden = LOCAL;
-  if (!LOCAL) cargarPedidos(true);   // al abrir: descuenta el stock de lo que entregaron los repartidores
+  pintarInicio();
+  if (!LOCAL) cargarPedidos(true); else sinServidor();   // al abrir: descuenta el stock de lo que entregaron los repartidores
 }
 
 function pedirClave(mensaje) {

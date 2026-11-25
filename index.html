@@ -159,6 +159,18 @@
   .cantidad output { min-width: 22px; text-align: center; font-weight: 700; white-space: nowrap; }
   .agregar { background: var(--verde); color: #fff; padding: 0 14px; font-weight: 600; }
   .vacio { color: var(--suave); padding: 14px 0; }
+  .enlaceSol { font: inherit; font-weight: 700; color: var(--rojo); background: none; border: 0; padding: 0 4px; cursor: pointer; text-decoration: underline; }
+  .noEncuentras { margin-top: 18px; padding: 14px; border: 1px dashed var(--borde); border-radius: 14px; background: #fff; display: grid; gap: 10px; }
+  .noEncuentras b { font-weight: 600; }
+  .solBotones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  @media (max-width: 420px) { .solBotones { grid-template-columns: 1fr; } }
+  .solBotones button { font: inherit; font-weight: 600; cursor: pointer; border-radius: 12px; padding: 12px 10px; background: #fff; color: var(--texto); border: 1px solid var(--borde); }
+  .solBotones #solUrgente { border-color: #f3b8bb; background: #fff5f5; color: #b00812; }
+  .dialogo .solForm { display: grid; gap: 8px; margin-top: 12px; text-align: left; }
+  .dialogo .solForm label { display: grid; gap: 4px; font-size: .88rem; font-weight: 600; color: #0b1a4a; }
+  .dialogo .solForm input, .dialogo .solForm select, .dialogo .solForm textarea { width: 100%; font: inherit; font-weight: 400; padding: 10px; border: 1px solid #dfe2ec; border-radius: 10px; }
+  .dialogo .solForm .par { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .dialogo .solForm .errorSol { color: #b00812; font-size: .88rem; min-height: 1.1em; margin: 0; }
 
   .caja { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 14px; }
   .linea { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; }
@@ -542,9 +554,18 @@
       <div class="filtros" id="filtros"></div>
 
       <div class="lista" id="lista" style="margin-top:12px"></div>
-      <p class="vacio" id="sinResultados" hidden>No hay productos con ese nombre. Puedes pedirlo abajo, en “¿Algo que no está en la lista?”.</p>
+      <div class="vacio" id="sinResultados" hidden>No hay productos con ese nombre.
+        <button type="button" class="enlaceSol" id="solDesdeBusqueda">Pídelo o sugiérelo aquí</button></div>
 
-      <label style="margin-top:18px">¿Algo que no está en la lista?
+      <div class="noEncuentras">
+        <b>¿No encuentras algo?</b>
+        <div class="solBotones">
+          <button type="button" id="solUrgente"><span aria-hidden="true">⚡</span> Lo necesito ahora</button>
+          <button type="button" id="solSugerir"><span aria-hidden="true">💡</span> Sugerir un producto</button>
+        </div>
+      </div>
+
+      <label style="margin-top:14px">¿Algo más para este pedido?
         <textarea id="otros" rows="2" placeholder="Ej.: 1 detergente líquido 3 L, marca indiferente"></textarea>
       </label>
     </div>
@@ -1707,6 +1728,76 @@ async function revisarPines() {
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) revisarPines(); });
 setInterval(() => { if (!document.hidden) revisarPines(); }, 60000);
+
+// --- "¿No encuentras algo?": lo necesito ahora (va a WhatsApp) o sugerir agregarlo al catálogo ---
+function pedirSolicitud(tipo, textoInicial) {
+  const urgente = tipo === "urgente";
+  const capa = crear("div", "capa");
+  const d = crear("div", "dialogo");
+  d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true"); d.setAttribute("aria-label", urgente ? "Lo necesito ahora" : "Sugerir un producto");
+  const circulo = crear("div", "circulo");
+  circulo.textContent = urgente ? "⚡" : "💡";
+  circulo.style.fontSize = "1.6rem";
+  d.append(circulo, crear("h3", "", urgente ? "¿Qué necesitas ahora?" : "¿Qué producto te gustaría encontrar?"),
+    crear("p", "", urgente ? "Te lo conseguimos y te avisamos por WhatsApp el precio y cuándo llega." : "Lo revisamos para agregarlo al catálogo. ¡Gracias por ayudarnos!"));
+  const f = crear("form", "solForm");
+  f.noValidate = true;
+  const campo = (etiqueta, el) => { const l = crear("label", "", etiqueta); l.append(el); return l; };
+  const texto = crear("textarea"); texto.rows = 2; texto.maxLength = 200; texto.value = textoInicial || "";
+  texto.placeholder = urgente ? "Ej.: 1 paracetamol infantil, pilas AA, hielo" : "Ej.: leche sin lactosa, pan integral, comida para gatos";
+  f.append(campo(urgente ? "Lo que necesitas" : "Producto", texto));
+  const nombre = crear("input"); nombre.maxLength = 60; nombre.autocomplete = "given-name"; nombre.value = $("nombre").value;
+  const edificio = crear("select"); edificio.append(new Option("Elige…", ""), ...CONFIG.edificios.map((n) => new Option(n, n))); edificio.value = $("edificio").value;
+  const depto = crear("input"); depto.maxLength = 20; depto.value = $("depto").value;
+  const fono = crear("input"); fono.type = "tel"; fono.maxLength = 20; fono.autocomplete = "tel"; fono.value = $("telefono").value;
+  if (urgente) {
+    f.append(campo("Tu nombre", nombre));
+    const par = crear("div", "par"); par.append(campo("Edificio", edificio), campo("Depto", depto)); f.append(par);
+  } else {
+    f.append(campo("Tu nombre (opcional)", nombre));
+  }
+  const error = crear("p", "errorSol"); error.setAttribute("role", "alert");
+  const botones = crear("div", "botones");
+  const no = crear("button", "", "Cancelar"); no.type = "button";
+  const si = crear("button", "si", urgente ? "Enviar por WhatsApp" : "Enviar sugerencia"); si.type = "submit";
+  botones.append(no, si);
+  f.append(error, botones);
+  d.append(f); capa.append(d);
+  const cerrar = () => { document.removeEventListener("keydown", teclas, true); capa.remove(); };
+  const teclas = (e) => { if (e.key === "Escape") { e.preventDefault(); cerrar(); } };
+  document.addEventListener("keydown", teclas, true);
+  no.onclick = cerrar;
+  capa.addEventListener("mousedown", (e) => { if (e.target === capa) cerrar(); });
+  f.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const que = texto.value.trim();
+    if (que.length < 2) { error.textContent = "Escribe qué necesitas."; texto.focus(); return; }
+    if (urgente && (!nombre.value.trim() || !edificio.value || !depto.value.trim())) { error.textContent = "Completa tu nombre, edificio y depto para llevártelo."; return; }
+    si.disabled = true;
+    let guardada = false;
+    if (nube) {
+      try {
+        const r = await nube.from("solicitudes").insert({ tipo, texto: que, nombre: nombre.value.trim().slice(0, 60) || null,
+          edificio: urgente ? edificio.value : null, depto: urgente ? depto.value.trim().slice(0, 20) : null, contacto: fono.value.trim().slice(0, 20) || null });
+        if (r.error && r.error.code === "P0001") { error.textContent = r.error.message; si.disabled = false; return; }
+        guardada = !r.error;
+      } catch (err) { /* sin conexión con la base: por WhatsApp igual llega */ }
+    }
+    cerrar();
+    const numero = CONFIG.whatsapp.replace(/\D/g, "");
+    if (urgente || (!guardada && numero)) {
+      const mensaje = (urgente ? "URGENTE - Lo necesito ahora: " + edificio.value + ", depto " + depto.value.trim() + "\nNombre: " + nombre.value.trim() + "\n\nNecesito: "
+        : "Sugerencia para el catálogo: ") + que;
+      if (numero) { window.location.href = "https://wa.me/" + numero + "?text=" + encodeURIComponent(mensaje); return; }
+    }
+    avisar(guardada ? "¡Gracias! Recibimos tu sugerencia" : "No se pudo enviar. Intenta de nuevo en un rato", guardada ? "ok" : "mal");
+  });
+  document.body.append(capa);
+  texto.focus();
+}
+$("solUrgente").onclick = () => pedirSolicitud("urgente");
+$("solSugerir").onclick = () => pedirSolicitud("sugerencia");
+$("solDesdeBusqueda").onclick = () => pedirSolicitud("sugerencia", $("buscar").value.trim());
 
 function nuevoCodigo() {
   const letras = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";   // sin O/0 ni I/1, que se confunden
